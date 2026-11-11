@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Carril Bici Albacete</title>
+  <meta name="description" content="Calcula la ruta más corta entre dos direcciones de Albacete circulando solo por carril bici.">
+  <meta name="theme-color" content="#12804a">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://tile.openstreetmap.org https://unpkg.com; connect-src 'self' https://overpass-api.de https://overpass.private.coffee https://overpass.kumi.systems https://nominatim.openstreetmap.org; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="panel">
+      <header class="brand">
+        <p class="brand__eyebrow">Albacete · solo carril bici</p>
+        <h1 class="brand__title">¿Cuánto hay por el carril?</h1>
+      </header>
+
+      <form id="route-form" class="route-form" novalidate>
+        <div class="field">
+          <label for="origin-input" class="field__label"><span class="pin pin--origin pin--small">A</span>Origen</label>
+          <div class="field__row">
+            <input id="origin-input" type="text" autocomplete="off" placeholder="Calle y número, o pulsa en el mapa">
+            <button type="button" class="btn btn--quiet" data-search="origin">Buscar</button>
+          </div>
+          <ul id="origin-suggestions" class="suggestions" hidden></ul>
+        </div>
+
+        <div class="field">
+          <label for="destination-input" class="field__label"><span class="pin pin--destination pin--small">B</span>Destino</label>
+          <div class="field__row">
+            <input id="destination-input" type="text" autocomplete="off" placeholder="Calle y número, o pulsa en el mapa">
+            <button type="button" class="btn btn--quiet" data-search="destination">Buscar</button>
+          </div>
+          <ul id="destination-suggestions" class="suggestions" hidden></ul>
+        </div>
+
+        <div class="pick">
+          <span class="pick__label">Al pulsar en el mapa colocas el</span>
+          <div class="segmented" role="radiogroup" aria-label="Punto que se coloca al pulsar en el mapa">
+            <button type="button" role="radio" aria-checked="true" data-pick="origin">Origen</button>
+            <button type="button" role="radio" aria-checked="false" data-pick="destination">Destino</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="gap-input" class="field__label">Unir huecos entre tramos de hasta <output id="gap-output" for="gap-input">20</output> m</label>
+          <input id="gap-input" type="range" min="0" max="100" step="5" value="20">
+          <p class="hint">Cubre cruces y pasos de cebra que el mapa no une. Se dibujan en naranja discontinuo. Con 0 m solo se usan tramos de carril.</p>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn btn--primary">Calcular ruta</button>
+          <button type="button" id="swap-btn" class="btn btn--quiet">Intercambiar</button>
+          <button type="button" id="clear-btn" class="btn btn--quiet">Limpiar</button>
+        </div>
+      </form>
+
+      <p id="status" class="status" role="status" aria-live="polite" data-tone="info">Cargando…</p>
+
+      <section id="result" class="result" hidden aria-label="Resultado de la ruta">
+        <p class="result__label">Distancia por carril bici</p>
+        <p id="result-total" class="result__total">–</p>
+        <p id="result-time" class="result__time"></p>
+        <dl class="result__list">
+          <div><dt><span class="swatch swatch--route"></span>Tramos de carril</dt><dd id="result-lane"></dd></div>
+          <div id="result-gap-row"><dt><span class="swatch swatch--gap"></span>Huecos unidos</dt><dd id="result-gap"></dd></div>
+          <div><dt><span class="swatch swatch--access"></span>Hasta el carril</dt><dd id="result-access"></dd></div>
+          <div id="result-streets-row" class="result__streets"><dt>Pasas por</dt><dd id="result-streets"></dd></div>
+        </dl>
+      </section>
+
+      <footer class="footer">
+        <p id="network-stats" class="footer__stats"></p>
+        <button type="button" id="refresh-btn" class="btn btn--link">Actualizar datos</button>
+      </footer>
+    </aside>
+
+    <main class="map-wrap">
+      <div id="map" aria-label="Mapa de Albacete con la red de carril bici"></div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="swatch swatch--network"></i>Red de carril bici</span>
+        <span><i class="swatch swatch--route"></i>Tu ruta</span>
+        <span><i class="swatch swatch--gap"></i>Hueco unido</span>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

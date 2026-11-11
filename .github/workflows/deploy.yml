@@ -1,0 +1,54 @@
+# Publica la web en GitHub Pages.
+# - En cada push a main.
+# - Cada lunes a las 04:17 UTC, para refrescar la red de carril bici desde OpenStreetMap.
+# Si los tests o la descarga fallan, no se publica y sigue en línea la versión anterior.
+name: Desplegar
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Tests
+        run: npm test
+
+      - name: Construir sitio
+        run: npm run build
+
+      - name: Descargar red de carril bici (OpenStreetMap)
+        run: node scripts/fetch-network.js dist/data/red-carril-bici.json
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

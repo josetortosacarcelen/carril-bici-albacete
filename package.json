@@ -1,0 +1,13 @@
+{
+  "name": "carril-bici-albacete",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Ruta más corta entre dos direcciones de Albacete usando solo carril bici",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "node --test tests/*.test.js",
+    "fetch-network": "node scripts/fetch-network.js",
+    "build": "node scripts/build.js"
+  }
+}
