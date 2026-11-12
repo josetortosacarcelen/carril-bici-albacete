@@ -3,7 +3,7 @@
 import { cp, rm, mkdir } from 'node:fs/promises';
 
 const OUT = 'dist';
-const PUBLIC = ['index.html', 'favicon.svg', '404.html', 'css', 'js'];
+const PUBLIC = ['index.html', 'favicon.svg', '404.html', 'css', 'js', 'fonts', 'vendor'];
 
 await rm(OUT, { recursive: true, force: true });
 await mkdir(OUT);
