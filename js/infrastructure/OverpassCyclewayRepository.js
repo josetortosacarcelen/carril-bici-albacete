@@ -1,4 +1,4 @@
-import { buildCyclewayQuery, toWays } from './overpassQuery.js';
+import { buildCyclewayQuery, toWays, toParkings } from './overpassQuery.js';
 
 /**
  * Descarga la red en vivo desde Overpass y la guarda en caché local.
@@ -15,14 +15,15 @@ export class OverpassCyclewayRepository {
     this.#cache = cache;
   }
 
-  async getWays({ forceRefresh = false } = {}) {
+  async getNetwork({ forceRefresh = false } = {}) {
     if (!forceRefresh) {
       const cached = this.#cache.get();
       if (cached) return cached;
     }
-    const ways = toWays(await this.#client.query(buildCyclewayQuery(this.#bbox)));
-    this.#cache.set(ways);
-    return ways;
+    const json = await this.#client.query(buildCyclewayQuery(this.#bbox));
+    const network = { ways: toWays(json), parkings: toParkings(json) };
+    this.#cache.set(network);
+    return network;
   }
 
   lastUpdated() {

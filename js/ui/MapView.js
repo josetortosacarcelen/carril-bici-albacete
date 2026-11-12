@@ -4,6 +4,7 @@ const cssVar = (name) =>
 
 const toLatLng = (p) => [p.lat, p.lon];
 const PIN_LETTER = { origin: 'A', destination: 'B' };
+const PARKING_MIN_ZOOM = 15;
 
 /** Envuelve Leaflet. El resto de la app no sabe que existe Leaflet. */
 export class MapView {
@@ -11,6 +12,7 @@ export class MapView {
   #networkLayer;
   #routeLayer;
   #stationLayer;
+  #parkingLayer;
   #stationMarkers = new Map();
   #stations = new Map();
   #markers = {};
@@ -27,6 +29,15 @@ export class MapView {
     this.#networkLayer = L.layerGroup().addTo(this.#map);
     this.#routeLayer = L.layerGroup().addTo(this.#map);
     this.#stationLayer = L.layerGroup().addTo(this.#map);
+    // Aparcabicis: hay cientos; solo se muestran con el mapa acercado.
+    this.#parkingLayer = L.layerGroup();
+    const toggleParkings = () => {
+      const visible = this.#map.getZoom() >= PARKING_MIN_ZOOM;
+      if (visible && !this.#map.hasLayer(this.#parkingLayer)) this.#parkingLayer.addTo(this.#map);
+      if (!visible && this.#map.hasLayer(this.#parkingLayer)) this.#parkingLayer.remove();
+    };
+    this.#map.on('zoomend', toggleParkings);
+    toggleParkings();
   }
 
   onMapClick(handler) {
@@ -74,6 +85,15 @@ export class MapView {
       marker.remove();
       this.#stationMarkers.delete(id);
       this.#stations.delete(id);
+    }
+  }
+
+  drawParkings(parkings) {
+    const layer = this.#parkingLayer;
+    layer.clearLayers();
+    const style = { radius: 5, color: '#fff', weight: 2, fillColor: cssVar('--parking'), fillOpacity: 1 };
+    for (const parking of parkings) {
+      L.circleMarker(toLatLng(parking), style).bindPopup(() => parkingPopup(parking)).addTo(layer);
     }
   }
 
@@ -175,5 +195,25 @@ function stationPopup(station, onPick) {
     actions.append(button);
   }
   root.append(actions);
+  return root;
+}
+
+function parkingPopup(parking) {
+  const root = document.createElement('div');
+  root.className = 'parking-popup';
+  const title = document.createElement('p');
+  title.className = 'station-popup__name';
+  title.textContent = parking.name ?? 'Aparcabicis';
+  const details = [
+    parking.capacity ? `${parking.capacity} plaza${parking.capacity === 1 ? '' : 's'}` : null,
+    parking.covered ? 'cubierto' : null,
+  ].filter(Boolean);
+  root.append(title);
+  if (details.length) {
+    const info = document.createElement('p');
+    info.className = 'station-popup__info';
+    info.textContent = details.join(' · ');
+    root.append(info);
+  }
   return root;
 }

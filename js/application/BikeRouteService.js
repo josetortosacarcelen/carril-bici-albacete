@@ -1,4 +1,4 @@
-import { EdgeKind } from './CyclewayGraphBuilder.js';
+import { EdgeKind, LaneKind } from './CyclewayGraphBuilder.js';
 import { haversine } from '../domain/geo.js';
 
 export const RouteErrorCode = Object.freeze({
@@ -93,7 +93,7 @@ export class BikeRouteService {
       graph.addEdge(START, id, entry.distance * this.#accessWeight, access(entry.distance));
       for (const [from, to] of directions(entry.segment)) {
         const lane = laneEdge(base, from, to);
-        if (lane) graph.addEdge(id, to.id, haversine(entry.point, to), laneMeta(lane));
+        if (lane) graph.addEdge(id, to.id, ...partOf(lane, haversine(entry.point, to)));
       }
     });
 
@@ -103,14 +103,14 @@ export class BikeRouteService {
       graph.addEdge(id, GOAL, exit.distance * this.#accessWeight, access(exit.distance));
       for (const [from, to] of directions(exit.segment)) {
         const lane = laneEdge(base, from, to);
-        if (lane) graph.addEdge(from.id, id, haversine(from, exit.point), laneMeta(lane));
+        if (lane) graph.addEdge(from.id, id, ...partOf(lane, haversine(from, exit.point)));
       }
       // Entrada y salida en el mismo segmento: se va directo si el sentido lo permite.
       entries.forEach((entry, j) => {
         if (entry.segment !== exit.segment) return;
         const { a, b } = exit.segment;
         const lane = entry.t <= exit.t ? laneEdge(base, a, b) : laneEdge(base, b, a);
-        if (lane) graph.addEdge(`entry${j}`, id, haversine(entry.point, exit.point), laneMeta(lane));
+        if (lane) graph.addEdge(`entry${j}`, id, ...partOf(lane, haversine(entry.point, exit.point)));
       });
     });
     return graph;
@@ -121,6 +121,8 @@ export class BikeRouteService {
     const streets = [];
     let laneDistanceM = 0;
     let gapDistanceM = 0;
+    let paintedDistanceM = 0;
+    let sharedDistanceM = 0;
     let accessStartM = 0;
     let accessEndM = 0;
 
@@ -130,8 +132,11 @@ export class BikeRouteService {
         else accessEndM = edge.lengthM;
         continue;
       }
-      if (edge.kind === EdgeKind.GAP) gapDistanceM += edge.weight;
-      else laneDistanceM += edge.weight;
+      // El peso puede llevar la penalización por tipo de tramo; se suma la longitud real.
+      if (edge.kind === EdgeKind.GAP) gapDistanceM += edge.lengthM;
+      else laneDistanceM += edge.lengthM;
+      if (edge.laneKind === LaneKind.PAINTED) paintedDistanceM += edge.lengthM;
+      if (edge.laneKind === LaneKind.SHARED) sharedDistanceM += edge.lengthM;
 
       const last = segments.at(-1);
       if (last?.kind === edge.kind) last.points.push(graph.node(to));
@@ -147,6 +152,8 @@ export class BikeRouteService {
       exit: graph.node(steps.at(-1).from),
       laneDistanceM,
       gapDistanceM,
+      paintedDistanceM,
+      sharedDistanceM,
       accessStartM,
       accessEndM,
       networkDistanceM: laneDistanceM + gapDistanceM,
@@ -157,7 +164,11 @@ export class BikeRouteService {
 const directions = ({ a, b }) => [[a, b], [b, a]];
 const laneEdge = (graph, from, to) =>
   graph.neighbors(from.id).find((e) => e.to === to.id && e.kind === EdgeKind.LANE);
-const laneMeta = (edge) => ({ kind: EdgeKind.LANE, wayId: edge.wayId, name: edge.name });
+/** Trozo de un tramo de carril: [peso, metadatos], con la misma penalización que el tramo. */
+const partOf = (lane, lengthM) => [
+  lengthM * lane.factor,
+  { kind: EdgeKind.LANE, wayId: lane.wayId, name: lane.name, laneKind: lane.laneKind, factor: lane.factor, lengthM },
+];
 
 /**
  * Vista del grafo de la red con nodos y aristas extra, sin modificarlo:

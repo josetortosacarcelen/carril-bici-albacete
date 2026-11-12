@@ -53,6 +53,7 @@
   --warn-bg: #fff4e5;
   --error-bg: #fde8e6;
   --station: #b5307a;      /* bici pública: magenta, distinto de ruta, A/B y huecos */
+  --parking: #3f5866;      /* aparcabicis: gris pizarra, discreto */
 
   --font-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
   --font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -76,11 +77,14 @@
     --warn-bg: #3a2c16;
     --error-bg: #3d1f1c;
     --station: #e06aa8;
+    --parking: #a9bcc7;
     color-scheme: dark;
   }
 }
 
 * { box-sizing: border-box; }
+/* Que ningún display (flex, grid…) le gane al atributo hidden. */
+[hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; }
 body {
   background: var(--bg);
@@ -245,6 +249,7 @@ output { font-variant-numeric: tabular-nums; font-weight: 600; }
 .swatch--network { background: var(--network); }
 .swatch--route { background: var(--route); height: 6px; }
 .swatch--gap { background: repeating-linear-gradient(90deg, var(--gap) 0 5px, transparent 5px 9px); }
+.swatch--parking { width: 10px; height: 10px; border-radius: 50%; background: var(--parking); border: 2px solid #fff; box-sizing: content-box; }
 .swatch--station { width: 12px; height: 12px; border-radius: 50%; background: var(--station); }
 .swatch--access { background: repeating-linear-gradient(90deg, var(--access) 0 2px, transparent 2px 6px); }
 
@@ -302,3 +307,13 @@ output { font-variant-numeric: tabular-nums; font-weight: 600; }
 .station-popup__info { margin-top: 2px !important; color: #5b6560; }
 .station-popup__actions { display: flex; gap: 6px; margin-top: 10px; }
 .station-popup__actions .btn { flex: 1; padding: 6px 8px; font-size: 13px; }
+
+/* Resultado: desglose y GPX */
+.result__sub dt { padding-left: 26px; color: var(--muted); font-size: 13px; }
+.result__sub dd { color: var(--muted); font-size: 13px; }
+#result-bikeshare { white-space: pre-line; }
+.result__gpx { margin-top: 12px; width: 100%; }
+
+/* Ventana de un aparcabicis */
+.parking-popup { font: 400 14px/1.4 var(--font-body); }
+.parking-popup p { margin: 0; }

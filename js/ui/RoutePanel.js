@@ -29,6 +29,12 @@ export class RoutePanel {
       resultLane: $('#result-lane'),
       resultGapRow: $('#result-gap-row'),
       resultGap: $('#result-gap'),
+      resultPaintedRow: $('#result-painted-row'),
+      resultPainted: $('#result-painted'),
+      resultSharedRow: $('#result-shared-row'),
+      resultShared: $('#result-shared'),
+      resultBikeShareRow: $('#result-bikeshare-row'),
+      resultBikeShare: $('#result-bikeshare'),
       resultAccess: $('#result-access'),
       resultStreets: $('#result-streets'),
       resultStreetsRow: $('#result-streets-row'),
@@ -81,6 +87,7 @@ export class RoutePanel {
       el.gapOutput.value = el.gapInput.value;
     });
     el.gapInput.addEventListener('change', () => this.#emit('gapChange', Number(el.gapInput.value)));
+    el.root.querySelector('#gpx-btn').addEventListener('click', () => this.#emit('downloadGpx'));
 
     el.root.querySelector('#swap-btn').addEventListener('click', () => this.#emit('swap'));
     el.root.querySelector('#clear-btn').addEventListener('click', () => this.#emit('clear'));
@@ -208,11 +215,30 @@ export class RoutePanel {
     el.resultLane.textContent = formatDistance(result.laneDistanceM);
     el.resultGap.textContent = formatDistance(result.gapDistanceM);
     el.resultGapRow.hidden = result.gapDistanceM === 0;
+    el.resultPainted.textContent = formatDistance(result.paintedDistanceM);
+    el.resultPaintedRow.hidden = result.paintedDistanceM < 1;
+    el.resultShared.textContent = formatDistance(result.sharedDistanceM);
+    el.resultSharedRow.hidden = result.sharedDistanceM < 1;
     el.resultAccess.textContent =
       `${formatDistance(result.accessStartM)} al salir · ${formatDistance(result.accessEndM)} al llegar`;
     el.resultStreets.textContent = result.streets.join(' → ');
     el.resultStreetsRow.hidden = result.streets.length === 0;
     el.result.hidden = false;
+  }
+
+  /** @param info { pickup, dropoff } de nearestStation (cada uno puede ser null), o null para ocultar. */
+  showBikeShare(info) {
+    const el = this.#el;
+    el.resultBikeShareRow.hidden = !info;
+    if (!info) return;
+    const plural = (n, one, many) => (n === 1 ? `1 ${one}` : `${n} ${many}`);
+    const pickup = info.pickup
+      ? `Coger en ${info.pickup.station.name}: a ${formatDistance(info.pickup.distanceM)}, ${plural(info.pickup.station.freeBikes, 'bici', 'bicis')}`
+      : 'Ninguna estación con bicis a menos de 1 km del origen';
+    const dropoff = info.dropoff
+      ? `Dejar en ${info.dropoff.station.name}: a ${formatDistance(info.dropoff.distanceM)}, ${plural(info.dropoff.station.emptySlots, 'anclaje libre', 'anclajes libres')}`
+      : 'Ninguna estación con anclajes libres a menos de 1 km del destino';
+    el.resultBikeShare.textContent = `${pickup}\n${dropoff}`;
   }
 
   hideResult() {

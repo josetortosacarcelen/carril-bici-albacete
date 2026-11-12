@@ -6,7 +6,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { CONFIG } from '../js/config.js';
 import { OverpassClient } from '../js/infrastructure/OverpassClient.js';
-import { buildCyclewayQuery, toWays } from '../js/infrastructure/overpassQuery.js';
+import { buildCyclewayQuery, toWays, toParkings } from '../js/infrastructure/overpassQuery.js';
 
 const MIN_EXPECTED_WAYS = 20; // por debajo, algo ha ido mal: mejor no publicar
 
@@ -15,12 +15,14 @@ const client = new OverpassClient({ endpoints: CONFIG.overpassUrls, timeoutMs: 1
   userAgent: 'carril-bici-albacete/1.0',
 });
 
-const ways = toWays(await client.query(buildCyclewayQuery(CONFIG.bbox)));
+const json = await client.query(buildCyclewayQuery(CONFIG.bbox));
+const ways = toWays(json);
+const parkings = toParkings(json);
 if (ways.length < MIN_EXPECTED_WAYS) {
   console.error(`Solo ${ways.length} tramos: no se publica para no romper la app.`);
   process.exit(1);
 }
 
 await mkdir(dirname(output), { recursive: true });
-await writeFile(output, JSON.stringify({ generatedAt: new Date().toISOString(), ways }));
-console.log(`${ways.length} tramos guardados en ${output}`);
+await writeFile(output, JSON.stringify({ generatedAt: new Date().toISOString(), ways, parkings }));
+console.log(`${ways.length} tramos y ${parkings.length} aparcabicis guardados en ${output}`);

@@ -34,11 +34,14 @@ export const CONFIG = Object.freeze({
     refreshMs: 2 * 60 * 1000,
   }),
 
-  cacheKey: 'carril-bici-albacete:red:v1',
+  cacheKey: 'carril-bici-albacete:red:v2', // v2: { ways, parkings }
   cacheTtlMs: 7 * 24 * 60 * 60 * 1000, // una semana
 
   cyclingSpeedKmh: 15,
   defaultGapToleranceM: 20,
+  // Acepta rodeos cortos para evitar carril pintado o compartido con peatones (ver LANE_COST).
+  // En Albacete casi todo es carril separado, así que no se ofrece como opción en la interfaz.
+  preferSegregated: true,
   // Distancia máxima desde una dirección hasta el carril bici más cercano.
   maxSnapDistanceM: 500,
 });

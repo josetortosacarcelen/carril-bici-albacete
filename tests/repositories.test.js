@@ -1,21 +1,22 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FallbackCyclewayRepository } from '../js/infrastructure/FallbackCyclewayRepository.js';
-import { buildCyclewayQuery, toWays } from '../js/infrastructure/overpassQuery.js';
+import { buildCyclewayQuery, toWays, toParkings } from '../js/infrastructure/overpassQuery.js';
 
-const failing = (msg) => ({ getWays: async () => { throw new Error(msg); }, lastUpdated: () => null });
-const working = (ways, date) => ({ getWays: async () => ways, lastUpdated: () => date });
+const failing = (msg) => ({ getNetwork: async () => { throw new Error(msg); }, lastUpdated: () => null });
+const working = (network, date) => ({ getNetwork: async () => network, lastUpdated: () => date });
 
 test('usa el primer repositorio que responde', async () => {
   const date = new Date('2026-11-09');
-  const repo = new FallbackCyclewayRepository([failing('sin archivo'), working([{ id: 1 }], date)]);
-  assert.deepEqual(await repo.getWays(), [{ id: 1 }]);
+  const network = { ways: [{ id: 1 }], parkings: [] };
+  const repo = new FallbackCyclewayRepository([failing('sin archivo'), working(network, date)]);
+  assert.deepEqual(await repo.getNetwork(), network);
   assert.equal(repo.lastUpdated(), date);
 });
 
 test('si todos fallan, junta los motivos', async () => {
   const repo = new FallbackCyclewayRepository([failing('A'), failing('B')]);
-  await assert.rejects(repo.getWays(), /A · B/);
+  await assert.rejects(repo.getNetwork(), /A · B/);
 });
 
 test('la consulta usa el rectángulo de la ciudad', () => {
@@ -49,4 +50,18 @@ test('toStations convierte las estaciones de CityBikes', async () => {
   assert.equal(stations[1].freeBikes, 0);
   assert.equal(stations[1].online, false);
   assert.deepEqual(toStations({}), []);
+});
+
+test('los aparcabicis se separan de los tramos', () => {
+  const json = { elements: [
+    { type: 'way', id: 2, nodes: [1, 2], geometry: [{ lat: 0, lon: 0 }, { lat: 0, lon: 1 }], tags: { highway: 'cycleway' } },
+    { type: 'node', id: 5, lat: 39, lon: -1.86, tags: { amenity: 'bicycle_parking', capacity: '10', covered: 'yes' } },
+    { type: 'way', id: 6, center: { lat: 39.1, lon: -1.85 }, geometry: [{ lat: 39.1, lon: -1.85 }], tags: { amenity: 'bicycle_parking' } },
+    { type: 'node', id: 7, tags: { amenity: 'bicycle_parking' } },
+  ] };
+  assert.deepEqual(toWays(json).map((w) => w.id), [2], 'un aparcabicis con forma de área no es un tramo');
+  assert.deepEqual(toParkings(json), [
+    { id: 'node/5', lat: 39, lon: -1.86, capacity: 10, covered: true, name: null },
+    { id: 'way/6', lat: 39.1, lon: -1.85, capacity: null, covered: false, name: null },
+  ]);
 });

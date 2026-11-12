@@ -1,24 +1,33 @@
 import { RouteError, RouteErrorCode } from './application/BikeRouteService.js';
+import { nearestStation } from './application/nearestStation.js';
+import { toGpx } from './application/gpx.js';
 import { formatCoords } from './ui/format.js';
 
 /**
- * Controlador: mantiene el estado (origen, destino, red) y coordina
- * repositorio, servicio de rutas, mapa y panel. Recibe todo por inyección.
+ * Controlador: mantiene el estado (origen, destino, red, estaciones) y
+ * coordina repositorios, servicio de rutas, mapa y panel. Recibe todo por inyección.
  */
 export class App {
   #deps;
   #state = {
     ways: [],
+    stations: [],
     origin: null,
     destination: null,
     pickTarget: 'origin',
     gapToleranceM: 0,
+    preferSegregated: true,
     edited: new Set(),
+    lastRoute: null, // { result, origin, destination } de la ruta que se ve
   };
 
-  constructor({ repository, stationRepository = null, graphBuilder, routeService, geocoder, mapView, panel, config }) {
-    this.#deps = { repository, stationRepository, graphBuilder, routeService, geocoder, mapView, panel, config };
+  constructor({
+    repository, stationRepository = null, graphBuilder, routeService, geocoder, mapView, panel, config,
+    download = () => {},
+  }) {
+    this.#deps = { repository, stationRepository, graphBuilder, routeService, geocoder, mapView, panel, config, download };
     this.#state.gapToleranceM = config.defaultGapToleranceM;
+    this.#state.preferSegregated = config.preferSegregated ?? true;
   }
 
   async start() {
@@ -41,12 +50,13 @@ export class App {
   async #loadStations() {
     const { stationRepository, mapView, config } = this.#deps;
     try {
-      const stations = await stationRepository.getStations();
-      mapView.drawStations(stations, (role, station) =>
-        this.#setPoint(role, station, { label: `${config.bikeShare.name}: ${station.name}`, advance: true }));
+      this.#state.stations = await stationRepository.getStations();
     } catch {
-      // Sin estaciones la app funciona igual; se reintenta en el siguiente refresco.
+      return; // Sin estaciones la app funciona igual; se reintenta en el siguiente refresco.
     }
+    mapView.drawStations(this.#state.stations, (role, station) =>
+      this.#setPoint(role, station, { label: `${config.bikeShare.name}: ${station.name}`, advance: true }));
+    this.#showBikeShare();
   }
 
   #bindEvents() {
@@ -62,6 +72,7 @@ export class App {
       .on('gapChange', (value) => this.#changeGapTolerance(value))
       .on('swap', () => this.#swap())
       .on('clear', () => this.#clear())
+      .on('downloadGpx', () => this.#downloadGpx())
       .on('refresh', () => {
         this.#loadNetwork({ forceRefresh: true });
         if (this.#deps.stationRepository) this.#loadStations();
@@ -72,9 +83,9 @@ export class App {
   async #loadNetwork({ forceRefresh = false } = {}) {
     const { repository, mapView, panel } = this.#deps;
     panel.showStatus('Cargando la red de carriles bici…', 'info');
-    let ways;
+    let network;
     try {
-      ways = await repository.getWays({ forceRefresh });
+      network = await repository.getNetwork({ forceRefresh });
     } catch (error) {
       // Si ya había una red cargada, se sigue usando.
       panel.showStatus(
@@ -83,18 +94,20 @@ export class App {
       );
       return;
     }
-    this.#state.ways = ways;
+    this.#state.ways = network.ways;
     this.#rebuildNetwork();
-    if (!this.#state.origin) mapView.fitToWays(ways);
+    mapView.drawParkings(network.parkings ?? []);
+    if (!this.#state.origin) mapView.fitToWays(network.ways);
     panel.showStatus('Pulsa en el mapa o escribe una dirección para empezar.', 'info');
     this.#tryRoute();
   }
 
   #rebuildNetwork() {
     const { graphBuilder, routeService, mapView, panel, repository } = this.#deps;
-    const network = graphBuilder.build(this.#state.ways, { gapToleranceM: this.#state.gapToleranceM });
+    const { ways, gapToleranceM, preferSegregated } = this.#state;
+    const network = graphBuilder.build(ways, { gapToleranceM, preferSegregated });
     routeService.setNetwork(network);
-    mapView.drawNetwork(this.#state.ways);
+    mapView.drawNetwork(ways);
     panel.showNetworkStats(network.stats, repository.lastUpdated());
   }
 
@@ -211,6 +224,7 @@ export class App {
       panel.hideSuggestions(role);
     }
     this.#state.edited.clear();
+    this.#state.lastRoute = null;
     mapView.clearRoute();
     panel.hideResult();
     panel.showStatus('Pulsa en el mapa o escribe una dirección para empezar.', 'info');
@@ -220,6 +234,7 @@ export class App {
   #tryRoute() {
     const { routeService, mapView, panel, config } = this.#deps;
     const { origin, destination } = this.#state;
+    this.#state.lastRoute = null;
     if (!origin || !destination) {
       mapView.clearRoute();
       panel.hideResult();
@@ -227,8 +242,10 @@ export class App {
     }
     try {
       const result = routeService.route(origin, destination);
+      this.#state.lastRoute = { result, origin, destination };
       mapView.drawRoute(result, origin, destination);
       panel.showResult(result, config.cyclingSpeedKmh);
+      this.#showBikeShare();
       panel.showStatus('', 'info');
     } catch (error) {
       if (!(error instanceof RouteError)) throw error;
@@ -236,5 +253,29 @@ export class App {
       panel.hideResult();
       if (error.code !== RouteErrorCode.NO_NETWORK) panel.showStatus(error.message, 'warn');
     }
+  }
+
+  /** Estación más cercana con bicis al origen y con anclajes libres al destino. */
+  #showBikeShare() {
+    const { lastRoute, stations } = this.#state;
+    if (!lastRoute || stations.length === 0) {
+      this.#deps.panel.showBikeShare(null);
+      return;
+    }
+    this.#deps.panel.showBikeShare({
+      pickup: nearestStation(lastRoute.origin, stations, 'bikes'),
+      dropoff: nearestStation(lastRoute.destination, stations, 'slots'),
+    });
+  }
+
+  #downloadGpx() {
+    const { panel, download } = this.#deps;
+    const { lastRoute } = this.#state;
+    if (!lastRoute) return;
+    const name = `${panel.getInputValue('origin') || 'Origen'} → ${panel.getInputValue('destination') || 'Destino'}`;
+    const now = new Date();
+    const two = (n) => String(n).padStart(2, '0');
+    const stamp = `${now.getFullYear()}${two(now.getMonth() + 1)}${two(now.getDate())}-${two(now.getHours())}${two(now.getMinutes())}`;
+    download(`ruta-carril-bici-${stamp}.gpx`, toGpx({ ...lastRoute, name, time: now }), 'application/gpx+xml');
   }
 }

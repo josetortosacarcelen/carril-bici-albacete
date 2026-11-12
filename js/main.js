@@ -13,6 +13,7 @@ import { CityBikesStationRepository } from './infrastructure/CityBikesStationRep
 import { NominatimGeocoder } from './infrastructure/NominatimGeocoder.js';
 import { MapView } from './ui/MapView.js';
 import { RoutePanel } from './ui/RoutePanel.js';
+import { download } from './ui/download.js';
 
 // Primero el archivo generado en el despliegue; si no existe (p. ej. en
 // local antes de ejecutar `npm run fetch-network`), Overpass en vivo.
@@ -42,6 +43,7 @@ const app = new App({
   }),
   mapView: new MapView('map', { center: CONFIG.center, zoom: CONFIG.zoom, tiles: CONFIG.tiles }),
   panel: new RoutePanel(document.querySelector('.panel')),
+  download,
 });
 
 app.start();

@@ -12,6 +12,27 @@ export const DETOUR_FACTOR = 2;
 
 const YES = new Set(['yes', '1', 'true']);
 
+/** Tipo de tramo: separado del tráfico, pintado en la calzada o compartido con peatones. */
+export const LaneKind = Object.freeze({ SEGREGATED: 'segregated', PAINTED: 'painted', SHARED: 'shared' });
+
+/**
+ * Cuánto «cuesta» cada metro según el tipo de tramo cuando se prefiere el
+ * carril separado: la ruta acepta hasta un 30 % más de recorrido por evitar
+ * carril pintado en la calzada. Las distancias mostradas siguen siendo reales.
+ */
+export const LANE_COST = Object.freeze({ segregated: 1, shared: 1.15, painted: 1.3 });
+
+export function laneKind(tags = {}) {
+  // segregated=no: la bici va mezclada con los peatones (p. ej. «cycleway» + «foot=designated»).
+  if (tags.highway === 'cycleway') return tags.segregated === 'no' ? LaneKind.SHARED : LaneKind.SEGREGATED;
+  if (['path', 'footway', 'pedestrian'].includes(tags.highway)) {
+    return tags.segregated === 'yes' ? LaneKind.SEGREGATED : LaneKind.SHARED;
+  }
+  // Calle con carril: «track» va separado de los coches; «lane» es pintura.
+  const sides = ['cycleway', 'cycleway:both', 'cycleway:left', 'cycleway:right'].map((k) => String(tags[k] ?? ''));
+  return sides.some((v) => v.endsWith('track')) ? LaneKind.SEGREGATED : LaneKind.PAINTED;
+}
+
 /**
  * Sentido de circulación para bicis de un tramo OSM:
  *  1 = en el sentido del dibujo, -1 = en sentido contrario, 0 = doble sentido.
@@ -40,12 +61,15 @@ export function bikeDirection(tags = {}) {
  * entre tramos que, en la práctica, son un cruce o un paso de cebra.
  */
 export class CyclewayGraphBuilder {
-  build(ways, { gapToleranceM = 0 } = {}) {
+  /**
+   * @param preferSegregated Si es true, el peso de cada tramo es su longitud × LANE_COST.
+   */
+  build(ways, { gapToleranceM = 0, preferSegregated = false } = {}) {
     const graph = new Graph();
     const wayOfNode = new Map();
     const segments = [];
     let laneLengthM = 0;
-    for (const way of ways) laneLengthM += this.#addWay(graph, way, wayOfNode, segments);
+    for (const way of ways) laneLengthM += this.#addWay(graph, way, wayOfNode, segments, preferSegregated);
 
     const nodes = [...graph.nodes()];
     const referenceLat = nodes.length ? nodes.reduce((sum, n) => sum + n.lat, 0) / nodes.length : 0;
@@ -67,14 +91,16 @@ export class CyclewayGraphBuilder {
     };
   }
 
-  #addWay(graph, way, wayOfNode, segments) {
+  #addWay(graph, way, wayOfNode, segments, preferSegregated) {
     const points = (way.nodes ?? [])
       .map((id, k) => ({ id, point: way.geometry?.[k] }))
       .filter(({ point }) => point && Number.isFinite(point.lat));
     if (points.length < 2) return 0;
 
     const direction = bikeDirection(way.tags);
-    const meta = { kind: EdgeKind.LANE, wayId: way.id, name: way.tags?.name ?? null };
+    const kind = laneKind(way.tags);
+    const factor = preferSegregated ? LANE_COST[kind] : 1;
+    const meta = { kind: EdgeKind.LANE, wayId: way.id, name: way.tags?.name ?? null, laneKind: kind, factor };
     let length = 0;
 
     const nodes = points.map(({ id, point }) => {
@@ -86,8 +112,9 @@ export class CyclewayGraphBuilder {
       const b = nodes[k];
       const distance = haversine(a, b);
       length += distance;
-      if (direction >= 0) graph.addEdge(a.id, b.id, distance, meta);
-      if (direction <= 0) graph.addEdge(b.id, a.id, distance, meta);
+      const edge = { ...meta, lengthM: distance };
+      if (direction >= 0) graph.addEdge(a.id, b.id, distance * factor, edge);
+      if (direction <= 0) graph.addEdge(b.id, a.id, distance * factor, edge);
       segments.push({ a, b, wayId: way.id });
     }
     return length;
@@ -122,7 +149,7 @@ export class CyclewayGraphBuilder {
       }
       if (nearestPerWay.size === 0) continue;
 
-      const byLane = distancesWithin(graph, node.id, toleranceM * DETOUR_FACTOR);
+      const byLane = distancesWithin(graph, node.id, toleranceM * DETOUR_FACTOR, (e) => e.lengthM);
       for (const { item, distance } of nearestPerWay.values()) {
         if ((byLane.get(item.id) ?? Infinity) > distance * DETOUR_FACTOR) {
           pending.push({ a: node, b: item, distance });
@@ -133,7 +160,7 @@ export class CyclewayGraphBuilder {
     // Se añaden al final para que ningún hueco influya en la decisión de otro.
     const gaps = new Map();
     for (const { a, b, distance } of pending) {
-      graph.addEdge(a.id, b.id, distance, { kind: EdgeKind.GAP, name: null });
+      graph.addEdge(a.id, b.id, distance, { kind: EdgeKind.GAP, name: null, lengthM: distance });
       const key = a.id < b.id ? `${a.id}:${b.id}` : `${b.id}:${a.id}`;
       if (!gaps.has(key)) gaps.set(key, [a, b]);
     }

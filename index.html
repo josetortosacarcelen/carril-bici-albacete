@@ -59,6 +59,7 @@
           <p class="hint">Cubre cruces y pasos de cebra que el mapa no une. Se dibujan en naranja discontinuo. Con 0 m solo se usan tramos de carril.</p>
         </div>
 
+
         <div class="actions">
           <button type="submit" class="btn btn--primary">Calcular ruta</button>
           <button type="button" id="swap-btn" class="btn btn--quiet">Intercambiar</button>
@@ -74,10 +75,14 @@
         <p id="result-time" class="result__time"></p>
         <dl class="result__list">
           <div><dt><span class="swatch swatch--route"></span>Tramos de carril</dt><dd id="result-lane"></dd></div>
+          <div id="result-painted-row" class="result__sub"><dt>de ellos, pintado en la calzada</dt><dd id="result-painted"></dd></div>
+          <div id="result-shared-row" class="result__sub"><dt>de ellos, compartido con peatones</dt><dd id="result-shared"></dd></div>
           <div id="result-gap-row"><dt><span class="swatch swatch--gap"></span>Huecos unidos</dt><dd id="result-gap"></dd></div>
           <div><dt><span class="swatch swatch--access"></span>Hasta el carril</dt><dd id="result-access"></dd></div>
           <div id="result-streets-row" class="result__streets"><dt>Pasas por</dt><dd id="result-streets"></dd></div>
+          <div id="result-bikeshare-row" class="result__streets" hidden><dt><span class="swatch swatch--station"></span>AlbaBici</dt><dd id="result-bikeshare"></dd></div>
         </dl>
+        <button type="button" id="gpx-btn" class="btn btn--quiet result__gpx">Descargar GPX</button>
       </section>
 
       <footer class="footer">
@@ -93,6 +98,7 @@
         <span><i class="swatch swatch--route"></i>Tu ruta</span>
         <span><i class="swatch swatch--gap"></i>Hueco unido</span>
         <span><i class="swatch swatch--station"></i>AlbaBici (bicis libres)</span>
+        <span><i class="swatch swatch--parking"></i>Aparcabicis (acerca el mapa)</span>
       </div>
     </main>
   </div>

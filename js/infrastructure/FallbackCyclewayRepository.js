@@ -1,6 +1,6 @@
 /**
  * Prueba varios repositorios en orden y usa el primero que responda.
- * Tiene la misma interfaz que cada uno de ellos (getWays, lastUpdated).
+ * Tiene la misma interfaz que cada uno de ellos (getNetwork, lastUpdated).
  */
 export class FallbackCyclewayRepository {
   #repositories;
@@ -10,13 +10,13 @@ export class FallbackCyclewayRepository {
     this.#repositories = repositories;
   }
 
-  async getWays(options) {
+  async getNetwork(options) {
     const failures = [];
     for (const repository of this.#repositories) {
       try {
-        const ways = await repository.getWays(options);
+        const network = await repository.getNetwork(options);
         this.#active = repository;
-        return ways;
+        return network;
       } catch (error) {
         failures.push(error.message);
       }
