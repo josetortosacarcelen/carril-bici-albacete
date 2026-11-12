@@ -5,10 +5,16 @@
 export class OverpassClient {
   #endpoints;
   #timeoutMs;
+  #headers;
 
-  constructor({ endpoints, timeoutMs = 45000 }) {
+  /**
+   * @param userAgent Solo en Node: overpass-api.de rechaza (406) el User-Agent
+   *   por defecto («node»). El navegador pone el suyo y no deja cambiarlo.
+   */
+  constructor({ endpoints, timeoutMs = 45000, userAgent = null }) {
     this.#endpoints = endpoints;
     this.#timeoutMs = timeoutMs;
+    this.#headers = userAgent ? { 'User-Agent': userAgent } : {};
   }
 
   async query(overpassQl) {
@@ -29,6 +35,7 @@ export class OverpassClient {
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
+        headers: this.#headers,
         body: new URLSearchParams({ data: overpassQl }),
         signal: controller.signal,
       });

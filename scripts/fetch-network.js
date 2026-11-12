@@ -11,7 +11,9 @@ import { buildCyclewayQuery, toWays } from '../js/infrastructure/overpassQuery.j
 const MIN_EXPECTED_WAYS = 20; // por debajo, algo ha ido mal: mejor no publicar
 
 const output = process.argv[2] ?? CONFIG.staticNetworkUrl;
-const client = new OverpassClient({ endpoints: CONFIG.overpassUrls, timeoutMs: 120000 });
+const client = new OverpassClient({ endpoints: CONFIG.overpassUrls, timeoutMs: 120000,
+  userAgent: 'carril-bici-albacete/1.0',
+});
 
 const ways = toWays(await client.query(buildCyclewayQuery(CONFIG.bbox)));
 if (ways.length < MIN_EXPECTED_WAYS) {
