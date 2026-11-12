@@ -66,7 +66,7 @@ export class NominatimGeocoder {
   }
 }
 
-function formatLabel(place) {
+export function formatLabel(place) {
   const a = place?.address ?? {};
   const street = a.road ?? a.pedestrian ?? a.cycleway ?? a.footway ?? a.square;
   if (street) {

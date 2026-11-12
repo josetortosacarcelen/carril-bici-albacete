@@ -14,7 +14,10 @@ Estaciones de bici pública AlbaBici en tiempo real desde CityBikes.
 | Construir `dist/` | `npm run build` |
 | Desplegar (solo manual, ver «Estado») | `gh workflow run deploy.yml` y `gh run list -L 1` |
 
-No hay `npm install`: **cero dependencias**. Node ≥ 18 (fetch nativo). Leaflet llega por CDN (unpkg, con SRI).
+No hay `npm install`: **cero dependencias**. Node ≥ 18 (fetch nativo).
+**Nada de terceros al abrir la web** salvo teselas OSM, CityBikes y (al buscar) Nominatim: Leaflet 1.9.4 está en `vendor/leaflet/`
+(con SRI en `index.html`) y las fuentes Barlow (woff2, subconjunto latino, OFL) en `fonts/`. Para actualizar Leaflet: descargar
+la `dist/` nueva, recalcular `sha256` (`openssl dgst -sha256 -binary f | base64`) y cambiar `integrity`.
 
 ## Mapa del código (`js/`)
 
@@ -40,7 +43,10 @@ Archivo estático: `data/red-carril-bici.json` = `{ generatedAt, ways }` (ignora
 - **Todo en castellano**: UI, comentarios, mensajes de error, commits, nombres de test. Identificadores en inglés.
 - Módulos ES nativos, clases con campos privados `#`, sin build ni transpilar. Estilo: 2 espacios, comillas simples, `;`, comas finales.
 - Inyección de dependencias por constructor; nada de singletons ni imports de infraestructura desde `domain/`.
-- Lógica nueva → en `domain/` o `application/` con test en `tests/*.test.js` (`node:test` + `assert/strict`, helper `way(id, [[nodeId, lat, lon]…], tags)`).
+- Lógica nueva → en `domain/` o `application/` con test en `tests/*.test.js` (`node:test` + `assert/strict`).
+  Archivos: `routing` (helper `way(id, [[nodeId, lat, lon]…], tags)`), `domain`, `repositories`, `rateLimiter`,
+  `app` (`setup()` con dobles `fakePanel`/`fakeMap`; `panel.emit(evento)`, `mapView.click(punto)`; si hay estaciones,
+  `t.mock.timers.enable({ apis: ['setInterval'] })` o el proceso no termina).
 - Texto de usuario con `textContent`, nunca `innerHTML` con datos externos.
 - Colores solo como variables CSS en `:root` (con variante oscura); `MapView` las lee con `cssVar()`.
 
@@ -50,7 +56,7 @@ Archivo estático: `data/red-carril-bici.json` = `{ generatedAt, ways }` (ignora
 - **Overpass desde Node necesita User-Agent propio**: overpass-api.de responde 406 al de por defecto (`node`). `OverpassClient` acepta `userAgent`; `fetch-network.js` envía `carril-bici-albacete/1.0`. Overpass a veces tarda > 3 min o da 429: lanzar la descarga en segundo plano.
 - **Nominatim**: máx. 1 petición/s, prohibido autocompletar → solo se busca al pulsar Enter/Buscar.
 - **Teselas OSM**: válidas solo para poco tráfico; si crece, cambiar `tiles` en `config.js` + CSP.
-- `scripts/build.js` copia una lista blanca (`PUBLIC`); un archivo público nuevo en la raíz hay que añadirlo ahí.
+- `scripts/build.js` copia una lista blanca (`PUBLIC`: html, css, js, fonts, vendor…); una carpeta pública nueva hay que añadirla ahí.
 - `fetch-network.js` aborta si hay < 20 tramos (protege de publicar una red vacía).
 - `README.md` es para personas: claro y conciso. Detalle técnico para Claude va aquí.
 
@@ -61,11 +67,9 @@ Archivo estático: `data/red-carril-bici.json` = `{ generatedAt, ways }` (ignora
 
 ## Problemas detectados pendientes (por prioridad)
 
-1. Google Fonts y Leaflet por CDN externos (RGPD / disponibilidad) → autoalojar.
-2. Tests ausentes: `App` (con dobles de panel/mapa/geocoder), `DisjointSet`, `MinHeap`, `SpatialIndex`, `SegmentIndex`, `formatLabel`.
-3. Accesibilidad: radio Origen/Destino sin flechas; sugerencias sin teclado ni `aria-expanded`.
-4. Caché de módulos JS tras desplegar (sin hash en nombres): un usuario puede ver una mezcla vieja/nueva unos minutos.
-5. Ideas: estación AlbaBici más cercana a origen/destino en el resultado, peso por tipo de tramo, exportar GPX, aparcabicis.
+1. Accesibilidad: radio Origen/Destino sin flechas; sugerencias sin teclado ni `aria-expanded`.
+2. Caché de módulos JS tras desplegar (sin hash en nombres): un usuario puede ver una mezcla vieja/nueva unos minutos.
+3. Ideas: estación AlbaBici más cercana a origen/destino en el resultado, peso por tipo de tramo, exportar GPX, aparcabicis.
 
 Al arreglar uno, bórralo de aquí (y añade su test).
 
