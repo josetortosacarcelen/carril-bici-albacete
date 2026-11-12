@@ -9,6 +9,8 @@ const ROLES = ['origin', 'destination'];
 export class RoutePanel {
   #el;
   #handlers = {};
+  #places = { origin: [], destination: [] };
+  #active = { origin: -1, destination: -1 };
 
   constructor(root) {
     const $ = (sel) => root.querySelector(sel);
@@ -57,15 +59,10 @@ export class RoutePanel {
 
     for (const role of ROLES) {
       const input = el.inputs[role];
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          this.#emit('search', role, input.value.trim());
-        } else if (e.key === 'Escape') {
-          this.hideSuggestions(role);
-        }
-      });
+      input.addEventListener('keydown', (e) => this.#onInputKey(role, e));
       input.addEventListener('input', () => this.#emit('inputEdited', role));
+      // Las opciones cancelan mousedown, así que perder el foco es salir de verdad.
+      input.addEventListener('blur', () => this.hideSuggestions(role));
     }
 
     el.root.querySelectorAll('[data-search]').forEach((btn) =>
@@ -75,9 +72,10 @@ export class RoutePanel {
       }),
     );
 
-    el.pickButtons.forEach((btn) =>
-      btn.addEventListener('click', () => this.#emit('pickTargetChange', btn.dataset.pick)),
-    );
+    el.pickButtons.forEach((btn) => {
+      btn.addEventListener('click', () => this.#emit('pickTargetChange', btn.dataset.pick));
+      btn.addEventListener('keydown', (e) => this.#onPickKey(e));
+    });
 
     el.gapInput.addEventListener('input', () => {
       el.gapOutput.value = el.gapInput.value;
@@ -87,6 +85,56 @@ export class RoutePanel {
     el.root.querySelector('#swap-btn').addEventListener('click', () => this.#emit('swap'));
     el.root.querySelector('#clear-btn').addEventListener('click', () => this.#emit('clear'));
     el.root.querySelector('#refresh-btn').addEventListener('click', () => this.#emit('refresh'));
+  }
+
+  /** Combobox: flechas para moverse por las sugerencias, Enter para elegir o buscar. */
+  #onInputKey(role, e) {
+    const open = !this.#el.suggestions[role].hidden && this.#places[role].length > 0;
+    const count = this.#places[role].length;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (!open) return;
+      e.preventDefault();
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      const current = this.#active[role];
+      const next = current < 0 ? (step > 0 ? 0 : count - 1) : (current + step + count) % count;
+      this.#setActive(role, next);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (open && this.#active[role] >= 0) this.#pick(role, this.#places[role][this.#active[role]]);
+      else this.#emit('search', role, e.target.value.trim());
+    } else if (e.key === 'Escape') {
+      this.hideSuggestions(role);
+    }
+  }
+
+  /** Grupo de radio: las flechas cambian la opción (y el foco), como uno nativo. */
+  #onPickKey(e) {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const buttons = this.#el.pickButtons;
+    const next = buttons[(buttons.indexOf(e.currentTarget) + step + buttons.length) % buttons.length];
+    this.#emit('pickTargetChange', next.dataset.pick);
+    next.focus();
+  }
+
+  #setActive(role, index) {
+    const input = this.#el.inputs[role];
+    const options = this.#el.suggestions[role].querySelectorAll('[role="option"]');
+    this.#active[role] = index;
+    options.forEach((option, k) => {
+      const active = k === index;
+      option.classList.toggle('is-active', active);
+      option.setAttribute('aria-selected', String(active));
+      if (active) option.scrollIntoView({ block: 'nearest' });
+    });
+    if (index >= 0) input.setAttribute('aria-activedescendant', options[index].id);
+    else input.removeAttribute('aria-activedescendant');
+  }
+
+  #pick(role, place) {
+    this.hideSuggestions(role);
+    this.#emit('suggestionPick', role, place);
   }
 
   setGapTolerance(value) {
@@ -104,36 +152,46 @@ export class RoutePanel {
 
   setPickTarget(role) {
     for (const btn of this.#el.pickButtons) {
-      btn.setAttribute('aria-checked', String(btn.dataset.pick === role));
+      const checked = btn.dataset.pick === role;
+      btn.setAttribute('aria-checked', String(checked));
+      btn.tabIndex = checked ? 0 : -1; // tabulador: un solo punto de parada en el grupo
     }
   }
 
   showSuggestions(role, places) {
     const list = this.#el.suggestions[role];
+    const input = this.#el.inputs[role];
     list.replaceChildren();
+    this.#places[role] = places;
     if (places.length === 0) {
       const empty = document.createElement('li');
       empty.className = 'suggestions__empty';
+      empty.setAttribute('role', 'option');
+      empty.setAttribute('aria-disabled', 'true');
       empty.textContent = 'Ninguna dirección coincide dentro de Albacete.';
       list.append(empty);
     }
-    for (const place of places) {
-      const item = document.createElement('li');
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = place.label;
-      button.addEventListener('click', () => {
-        this.hideSuggestions(role);
-        this.#emit('suggestionPick', role, place);
-      });
-      item.append(button);
-      list.append(item);
-    }
+    places.forEach((place, k) => {
+      const option = document.createElement('li');
+      option.id = `${role}-option-${k}`;
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', 'false');
+      option.textContent = place.label;
+      option.addEventListener('mousedown', (e) => e.preventDefault()); // no quitar el foco al campo
+      option.addEventListener('click', () => this.#pick(role, place));
+      list.append(option);
+    });
     list.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+    this.#setActive(role, -1);
+    if (document.activeElement !== input) input.focus(); // tras pulsar «Buscar», seguir con flechas
   }
 
   hideSuggestions(role) {
     this.#el.suggestions[role].hidden = true;
+    this.#el.inputs[role].setAttribute('aria-expanded', 'false');
+    this.#el.inputs[role].removeAttribute('aria-activedescendant');
+    this.#active[role] = -1;
   }
 
   showStatus(message, tone = 'info') {

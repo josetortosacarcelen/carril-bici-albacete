@@ -153,19 +153,16 @@ output { font-variant-numeric: tabular-nums; font-weight: 600; }
   border-radius: 6px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
 }
-.suggestions button {
-  width: 100%;
-  text-align: left;
+.suggestions [role='option'] {
   padding: 8px 10px;
-  border: 0;
   border-radius: 4px;
-  background: none;
   color: var(--fg);
-  font: inherit;
   cursor: pointer;
 }
-.suggestions button:hover, .suggestions button:focus-visible { background: var(--bg); outline: none; }
-.suggestions__empty { padding: 8px 10px; color: var(--muted); }
+.suggestions [role='option']:hover { background: var(--bg); }
+/* La opción activa con el teclado (aria-activedescendant): el foco sigue en el campo. */
+.suggestions [role='option'].is-active { background: var(--bg); box-shadow: inset 3px 0 0 var(--route); }
+.suggestions .suggestions__empty { color: var(--muted); cursor: default; }
 
 /* Selector origen/destino */
 .pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }

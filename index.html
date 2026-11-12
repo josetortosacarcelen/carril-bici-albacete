@@ -28,26 +28,28 @@
         <div class="field">
           <label for="origin-input" class="field__label"><span class="pin pin--origin pin--small">A</span>Origen</label>
           <div class="field__row">
-            <input id="origin-input" type="text" autocomplete="off" placeholder="Calle y número, o pulsa en el mapa">
+            <input id="origin-input" type="text" autocomplete="off" placeholder="Calle y número, o pulsa en el mapa"
+                   role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="origin-suggestions">
             <button type="button" class="btn btn--quiet" data-search="origin">Buscar</button>
           </div>
-          <ul id="origin-suggestions" class="suggestions" hidden></ul>
+          <ul id="origin-suggestions" class="suggestions" role="listbox" aria-label="Direcciones encontradas para el origen" hidden></ul>
         </div>
 
         <div class="field">
           <label for="destination-input" class="field__label"><span class="pin pin--destination pin--small">B</span>Destino</label>
           <div class="field__row">
-            <input id="destination-input" type="text" autocomplete="off" placeholder="Calle y número, o pulsa en el mapa">
+            <input id="destination-input" type="text" autocomplete="off" placeholder="Calle y número, o pulsa en el mapa"
+                   role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="destination-suggestions">
             <button type="button" class="btn btn--quiet" data-search="destination">Buscar</button>
           </div>
-          <ul id="destination-suggestions" class="suggestions" hidden></ul>
+          <ul id="destination-suggestions" class="suggestions" role="listbox" aria-label="Direcciones encontradas para el destino" hidden></ul>
         </div>
 
         <div class="pick">
-          <span class="pick__label">Al pulsar en el mapa colocas el</span>
-          <div class="segmented" role="radiogroup" aria-label="Punto que se coloca al pulsar en el mapa">
+          <span class="pick__label" id="pick-label">Al pulsar en el mapa colocas el</span>
+          <div class="segmented" role="radiogroup" aria-labelledby="pick-label">
             <button type="button" role="radio" aria-checked="true" data-pick="origin">Origen</button>
-            <button type="button" role="radio" aria-checked="false" data-pick="destination">Destino</button>
+            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-pick="destination">Destino</button>
           </div>
         </div>
 
