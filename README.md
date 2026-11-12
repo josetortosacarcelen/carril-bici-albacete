@@ -7,9 +7,12 @@ Calcula la ruta más corta entre dos direcciones de Albacete **yendo solo por ca
 1. Escribe una dirección y pulsa **Enter** (o **Buscar**), o pulsa directamente en el mapa.
    **A** es el origen y **B** el destino.
 2. La ruta aparece sola en cuanto hay dos puntos. Puedes arrastrar los marcadores.
-3. Las **estaciones de AlbaBici** salen en el mapa con las bicis libres en ese momento. Pulsa una y elige
-   **Salir de aquí** o **Llegar aquí** para usarla como origen o destino.
-4. **Unir huecos**: en el mapa los carriles suelen cortarse en los cruces. Este control permite saltar cortes
+   Si hay un pequeño rodeo por carril separado del tráfico, la ruta lo prefiere.
+3. Con la ruta verás qué **estación de AlbaBici** te queda más cerca para coger una bici y para dejarla,
+   y un botón para **descargar la ruta en GPX** (para Komoot, Strava, Garmin…).
+4. En el mapa salen las **estaciones de AlbaBici** con las bicis libres en ese momento. Pulsa una y elige
+   **Salir de aquí** o **Llegar aquí**. Si acercas el mapa, también salen los **aparcabicis**.
+5. **Unir huecos**: en el mapa los carriles suelen cortarse en los cruces. Este control permite saltar cortes
    de hasta X metros. Esos saltos se dibujan en naranja y se cuentan aparte. Con 0 m solo se usa carril.
 
 ¿Falta un carril o está mal? Corrígelo en [openstreetmap.org](https://www.openstreetmap.org): la app lo recoge en el siguiente despliegue.
@@ -44,7 +47,7 @@ Dirección de la web: <https://josetortosacarcelen.github.io/carril-bici-albacet
 
 | Qué | Servicio |
 |---|---|
-| Carriles bici | OpenStreetMap, descargados al publicar |
+| Carriles bici y aparcabicis | OpenStreetMap, descargados al publicar |
 | Direcciones | Nominatim (OpenStreetMap). Máximo una búsqueda por segundo |
 | Estaciones de AlbaBici | [CityBikes](https://citybik.es), en tiempo real |
 | Mapa de fondo | Teselas de OpenStreetMap. Valen para poco tráfico |
@@ -53,7 +56,7 @@ Todo es gratuito y no necesita claves.
 
 ## Cómo está hecho
 
-Web estática en JavaScript, sin dependencias ni compilación.
+Web estática en JavaScript, sin dependencias. Todo se sirve desde la propia web: no carga nada de Google ni de otros servidores, salvo los datos de la tabla anterior.
 
 - `js/domain/` — cálculo de rutas (grafo y algoritmo A*).
 - `js/application/` — convierte los carriles en grafo y calcula la ruta.
