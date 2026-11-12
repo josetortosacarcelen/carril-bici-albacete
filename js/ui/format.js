@@ -15,7 +15,3 @@ export function formatDuration(meters, speedKmh) {
 export function formatDate(date) {
   return dateFormat.format(date);
 }
-
-export function formatCoords({ lat, lon }) {
-  return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-}

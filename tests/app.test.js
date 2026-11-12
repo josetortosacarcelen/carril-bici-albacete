@@ -66,7 +66,7 @@ function setup({ repository, stationRepository = null, places = {}, builder = ne
     reverse: async () => 'Calle de prueba',
   };
   const app = new App({
-    config: { defaultGapToleranceM: 0, cyclingSpeedKmh: 15, bikeShare: { name: 'AlbaBici', refreshMs: 60000 } },
+    config: { city: 'Albacete', defaultGapToleranceM: 0, cyclingSpeedKmh: 15, bikeShare: { name: 'AlbaBici', refreshMs: 60000 } },
     repository: repository ?? { getNetwork: async () => ({ ways: WAYS, parkings: [] }), lastUpdated: () => null },
     stationRepository,
     graphBuilder: builder,

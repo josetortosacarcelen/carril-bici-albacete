@@ -14,6 +14,9 @@ import { NominatimGeocoder } from './infrastructure/NominatimGeocoder.js';
 import { MapView } from './ui/MapView.js';
 import { RoutePanel } from './ui/RoutePanel.js';
 import { download } from './ui/download.js';
+import { applyConfigTexts } from './ui/texts.js';
+
+applyConfigTexts(document, CONFIG);
 
 // Primero el archivo generado en el despliegue; si no existe (p. ej. en
 // local antes de ejecutar `npm run fetch-network`), Overpass en vivo.
@@ -42,7 +45,7 @@ const app = new App({
     bbox: CONFIG.bbox,
   }),
   mapView: new MapView('map', { center: CONFIG.center, zoom: CONFIG.zoom, tiles: CONFIG.tiles }),
-  panel: new RoutePanel(document.querySelector('.panel')),
+  panel: new RoutePanel(document.querySelector('.panel'), { city: CONFIG.city }),
   download,
 });
 

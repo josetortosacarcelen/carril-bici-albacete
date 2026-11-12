@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { nearestStation } from '../js/application/nearestStation.js';
 import { toGpx } from '../js/application/gpx.js';
-import { CyclewayGraphBuilder, laneKind, LaneKind } from '../js/application/CyclewayGraphBuilder.js';
+import { CyclewayGraphBuilder, laneKind } from '../js/application/CyclewayGraphBuilder.js';
+import { LaneKind } from '../js/domain/edges.js';
 import { BikeRouteService } from '../js/application/BikeRouteService.js';
 import { AStarPathFinder } from '../js/domain/AStarPathFinder.js';
 
@@ -35,6 +36,7 @@ test('toGpx genera un track del origen al destino sin puntos repetidos', () => {
       segments: [{ kind: 'lane', points: [p(39.0, -1.86), p(39.0, -1.855)] }, { kind: 'gap', points: [p(39.0, -1.855), p(39.0, -1.85)] }],
     },
     name: 'Calle A <B> & «C»',
+    creator: 'Carril Bici Albacete',
     time: new Date('2026-11-12T10:00:00Z'),
   });
   const points = [...gpx.matchAll(/<trkpt lat="([\d.-]+)" lon="([\d.-]+)"/g)].map((m) => `${m[1]},${m[2]}`);
@@ -43,7 +45,7 @@ test('toGpx genera un track del origen al destino sin puntos repetidos', () => {
   ]);
   assert.match(gpx, /<name>Calle A &lt;B&gt; &amp; «C»<\/name>/);
   assert.match(gpx, /<time>2026-11-12T10:00:00.000Z<\/time>/);
-  assert.match(gpx, /^<\?xml version="1.0" encoding="UTF-8"\?>\n<gpx version="1.1"/);
+  assert.match(gpx, /^<\?xml version="1.0" encoding="UTF-8"\?>\n<gpx version="1.1" creator="Carril Bici Albacete"/);
 });
 
 test('laneKind distingue carril separado, pintado y compartido con peatones', () => {

@@ -1,7 +1,7 @@
 import { RouteError, RouteErrorCode } from './application/BikeRouteService.js';
 import { nearestStation } from './application/nearestStation.js';
 import { toGpx } from './application/gpx.js';
-import { formatCoords } from './ui/format.js';
+import { formatCoords } from './domain/geo.js';
 
 /**
  * Controlador: mantiene el estado (origen, destino, red, estaciones) y
@@ -177,7 +177,7 @@ export class App {
       try {
         const [first] = await geocoder.search(text);
         if (!first) {
-          panel.showStatus(`No he encontrado «${text}» en Albacete. Prueba con otra forma de escribirla.`, 'warn');
+          panel.showStatus(`No he encontrado «${text}» en ${this.#deps.config.city}. Prueba con otra forma de escribirla.`, 'warn');
           return;
         }
         this.#setPoint(role, first, { label: first.label });
@@ -276,6 +276,7 @@ export class App {
     const now = new Date();
     const two = (n) => String(n).padStart(2, '0');
     const stamp = `${now.getFullYear()}${two(now.getMonth() + 1)}${two(now.getDate())}-${two(now.getHours())}${two(now.getMinutes())}`;
-    download(`ruta-carril-bici-${stamp}.gpx`, toGpx({ ...lastRoute, name, time: now }), 'application/gpx+xml');
+    const creator = `Carril Bici ${this.#deps.config.city}`;
+    download(`ruta-carril-bici-${stamp}.gpx`, toGpx({ ...lastRoute, name, creator, time: now }), 'application/gpx+xml');
   }
 }

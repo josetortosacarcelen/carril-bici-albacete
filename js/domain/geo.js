@@ -10,3 +10,8 @@ export function haversine(a, b) {
     Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(s));
 }
+
+/** Coordenadas legibles («38.99430, -1.85850»), para cuando no hay dirección. */
+export function formatCoords({ lat, lon }) {
+  return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+}

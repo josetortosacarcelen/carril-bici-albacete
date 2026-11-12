@@ -1,4 +1,4 @@
-import { EdgeKind, LaneKind } from './CyclewayGraphBuilder.js';
+import { EdgeKind, LaneKind } from '../domain/edges.js';
 import { haversine } from '../domain/geo.js';
 
 export const RouteErrorCode = Object.freeze({

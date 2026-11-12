@@ -4,16 +4,12 @@ import { SpatialIndex } from '../domain/SpatialIndex.js';
 import { SegmentIndex } from '../domain/SegmentIndex.js';
 import { distancesWithin } from '../domain/distancesWithin.js';
 import { haversine } from '../domain/geo.js';
-
-export const EdgeKind = Object.freeze({ LANE: 'lane', GAP: 'gap', ACCESS: 'access' });
+import { EdgeKind, LaneKind } from '../domain/edges.js';
 
 /** Un hueco solo se une si rodear por el carril es más del doble de largo que saltarlo. */
 export const DETOUR_FACTOR = 2;
 
 const YES = new Set(['yes', '1', 'true']);
-
-/** Tipo de tramo: separado del tráfico, pintado en la calzada o compartido con peatones. */
-export const LaneKind = Object.freeze({ SEGREGATED: 'segregated', PAINTED: 'painted', SHARED: 'shared' });
 
 /**
  * Cuánto «cuesta» cada metro según el tipo de tramo cuando se prefiere el

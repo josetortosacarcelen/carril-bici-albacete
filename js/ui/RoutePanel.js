@@ -12,7 +12,11 @@ export class RoutePanel {
   #places = { origin: [], destination: [] };
   #active = { origin: -1, destination: -1 };
 
-  constructor(root) {
+  #city;
+
+  /** @param city Para los mensajes («…dentro de Albacete»). */
+  constructor(root, { city }) {
+    this.#city = city;
     const $ = (sel) => root.querySelector(sel);
     this.#el = {
       root,
@@ -175,7 +179,7 @@ export class RoutePanel {
       empty.className = 'suggestions__empty';
       empty.setAttribute('role', 'option');
       empty.setAttribute('aria-disabled', 'true');
-      empty.textContent = 'Ninguna dirección coincide dentro de Albacete.';
+      empty.textContent = `Ninguna dirección coincide dentro de ${this.#city}.`;
       list.append(empty);
     }
     places.forEach((place, k) => {

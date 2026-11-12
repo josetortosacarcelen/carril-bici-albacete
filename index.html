@@ -20,7 +20,7 @@
   <div class="app">
     <aside class="panel">
       <header class="brand">
-        <p class="brand__eyebrow">Albacete · solo carril bici</p>
+        <p class="brand__eyebrow"><span data-text="city">Albacete</span> · solo carril bici</p>
         <h1 class="brand__title">¿Cuánto hay por el carril?</h1>
       </header>
 
@@ -80,7 +80,7 @@
           <div id="result-gap-row"><dt><span class="swatch swatch--gap"></span>Huecos unidos</dt><dd id="result-gap"></dd></div>
           <div><dt><span class="swatch swatch--access"></span>Hasta el carril</dt><dd id="result-access"></dd></div>
           <div id="result-streets-row" class="result__streets"><dt>Pasas por</dt><dd id="result-streets"></dd></div>
-          <div id="result-bikeshare-row" class="result__streets" hidden><dt><span class="swatch swatch--station"></span>AlbaBici</dt><dd id="result-bikeshare"></dd></div>
+          <div id="result-bikeshare-row" class="result__streets" data-requires="bikeShare" hidden><dt><span class="swatch swatch--station"></span><span data-text="bikeShare">AlbaBici</span></dt><dd id="result-bikeshare"></dd></div>
         </dl>
         <button type="button" id="gpx-btn" class="btn btn--quiet result__gpx">Descargar GPX</button>
       </section>
@@ -92,12 +92,12 @@
     </aside>
 
     <main class="map-wrap">
-      <div id="map" aria-label="Mapa de Albacete con la red de carril bici"></div>
+      <div id="map" aria-label="Mapa de Albacete con la red de carril bici" data-label="Mapa de {city} con la red de carril bici"></div>
       <div class="legend" aria-hidden="true">
         <span><i class="swatch swatch--network"></i>Red de carril bici</span>
         <span><i class="swatch swatch--route"></i>Tu ruta</span>
         <span><i class="swatch swatch--gap"></i>Hueco unido</span>
-        <span><i class="swatch swatch--station"></i>AlbaBici (bicis libres)</span>
+        <span data-requires="bikeShare"><i class="swatch swatch--station"></i><span data-text="bikeShare">AlbaBici</span> (bicis libres)</span>
         <span><i class="swatch swatch--parking"></i>Aparcabicis (acerca el mapa)</span>
       </div>
     </main>

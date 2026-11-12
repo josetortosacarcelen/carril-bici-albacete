@@ -1,4 +1,6 @@
 /* global L */
+import { EdgeKind } from '../domain/edges.js';
+
 const cssVar = (name) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -140,7 +142,7 @@ export class MapView {
     for (const segment of result.segments) {
       const coords = segment.points.map(toLatLng);
       allPoints.push(...coords);
-      if (segment.kind === 'gap') {
+      if (segment.kind === EdgeKind.GAP) {
         L.polyline(coords, { color: cssVar('--gap'), weight: 5, dashArray: '6 6', interactive: false }).addTo(layer);
       } else {
         L.polyline(coords, { color: cssVar('--route-casing'), weight: 10, interactive: false }).addTo(layer);
