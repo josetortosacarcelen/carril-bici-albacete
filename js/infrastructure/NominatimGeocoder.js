@@ -1,15 +1,20 @@
+import { RateLimiter } from './RateLimiter.js';
+
 /**
  * Búsqueda de direcciones con Nominatim (OpenStreetMap), limitada a la ciudad.
  * La política de Nominatim no permite autocompletar mientras se escribe,
- * así que la app solo busca cuando el usuario lo pide.
+ * así que la app solo busca cuando el usuario lo pide, y como máximo
+ * una petición por segundo (también al pulsar o arrastrar en el mapa).
  */
 export class NominatimGeocoder {
   #searchUrl;
   #reverseUrl;
   #city;
   #bbox;
+  #limiter;
 
-  constructor({ searchUrl, reverseUrl, city, bbox }) {
+  constructor({ searchUrl, reverseUrl, city, bbox, minIntervalMs = 1100 }) {
+    this.#limiter = new RateLimiter(minIntervalMs);
     this.#searchUrl = searchUrl;
     this.#reverseUrl = reverseUrl;
     this.#city = city;
@@ -36,7 +41,11 @@ export class NominatimGeocoder {
     }));
   }
 
-  async reverse({ lat, lon }) {
+  /**
+   * @param key Peticiones con la misma clave se sustituyen mientras esperan turno
+   *   (rechazan con SupersededError): al arrastrar solo cuenta la última.
+   */
+  async reverse({ lat, lon }, { key = null } = {}) {
     const params = new URLSearchParams({
       lat: String(lat),
       lon: String(lon),
@@ -45,13 +54,15 @@ export class NominatimGeocoder {
       zoom: '18',
       'accept-language': 'es',
     });
-    return formatLabel(await this.#get(`${this.#reverseUrl}?${params}`));
+    return formatLabel(await this.#get(`${this.#reverseUrl}?${params}`, key));
   }
 
-  async #get(url) {
-    const response = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (!response.ok) throw new Error(`Nominatim respondió con el código ${response.status}`);
-    return response.json();
+  #get(url, key = null) {
+    return this.#limiter.schedule(async () => {
+      const response = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error(`Nominatim respondió con el código ${response.status}`);
+      return response.json();
+    }, { key });
   }
 }
 

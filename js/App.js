@@ -16,8 +16,8 @@ export class App {
     edited: new Set(),
   };
 
-  constructor({ repository, graphBuilder, routeService, geocoder, mapView, panel, config }) {
-    this.#deps = { repository, graphBuilder, routeService, geocoder, mapView, panel, config };
+  constructor({ repository, stationRepository = null, graphBuilder, routeService, geocoder, mapView, panel, config }) {
+    this.#deps = { repository, stationRepository, graphBuilder, routeService, geocoder, mapView, panel, config };
     this.#state.gapToleranceM = config.defaultGapToleranceM;
   }
 
@@ -26,7 +26,27 @@ export class App {
     panel.setGapTolerance(this.#state.gapToleranceM);
     panel.setPickTarget(this.#state.pickTarget);
     this.#bindEvents();
+    this.#startStations();
     await this.#loadNetwork();
+  }
+
+  /** Estaciones de bici pública: se cargan aparte y se refrescan solas. */
+  #startStations() {
+    const { stationRepository, config } = this.#deps;
+    if (!stationRepository) return;
+    this.#loadStations();
+    setInterval(() => this.#loadStations(), config.bikeShare.refreshMs);
+  }
+
+  async #loadStations() {
+    const { stationRepository, mapView, config } = this.#deps;
+    try {
+      const stations = await stationRepository.getStations();
+      mapView.drawStations(stations, (role, station) =>
+        this.#setPoint(role, station, { label: `${config.bikeShare.name}: ${station.name}`, advance: true }));
+    } catch {
+      // Sin estaciones la app funciona igual; se reintenta en el siguiente refresco.
+    }
   }
 
   #bindEvents() {
@@ -42,25 +62,32 @@ export class App {
       .on('gapChange', (value) => this.#changeGapTolerance(value))
       .on('swap', () => this.#swap())
       .on('clear', () => this.#clear())
-      .on('refresh', () => this.#loadNetwork({ forceRefresh: true }))
+      .on('refresh', () => {
+        this.#loadNetwork({ forceRefresh: true });
+        if (this.#deps.stationRepository) this.#loadStations();
+      })
       .on('submit', () => this.#submit());
   }
 
   async #loadNetwork({ forceRefresh = false } = {}) {
     const { repository, mapView, panel } = this.#deps;
-    panel.showStatus('Descargando la red de carriles bici de OpenStreetMap…', 'info');
+    panel.showStatus('Cargando la red de carriles bici…', 'info');
+    let ways;
     try {
-      this.#state.ways = await repository.getWays({ forceRefresh });
-      this.#rebuildNetwork();
-      if (!this.#state.origin) mapView.fitToWays(this.#state.ways);
-      panel.showStatus('Pulsa en el mapa o escribe una dirección para empezar.', 'info');
-      this.#tryRoute();
+      ways = await repository.getWays({ forceRefresh });
     } catch (error) {
+      // Si ya había una red cargada, se sigue usando.
       panel.showStatus(
-        `No se pudo descargar la red (${error.message}). Comprueba la conexión y pulsa «Actualizar datos».`,
+        `No se pudo cargar la red (${error.message}). Comprueba la conexión y pulsa «Recargar datos».`,
         'error',
       );
+      return;
     }
+    this.#state.ways = ways;
+    this.#rebuildNetwork();
+    if (!this.#state.origin) mapView.fitToWays(ways);
+    panel.showStatus('Pulsa en el mapa o escribe una dirección para empezar.', 'info');
+    this.#tryRoute();
   }
 
   #rebuildNetwork() {
@@ -95,7 +122,7 @@ export class App {
     } else if (reverse) {
       panel.setInputValue(role, 'Buscando la dirección…');
       geocoder
-        .reverse(location)
+        .reverse(location, { key: role })
         .catch(() => formatCoords(location))
         .then((text) => {
           if (this.#state[role] === location) panel.setInputValue(role, text || formatCoords(location));
@@ -159,6 +186,13 @@ export class App {
     this.#state.destination = origin;
     panel.setInputValue('origin', destinationText);
     panel.setInputValue('destination', originText);
+    // La marca de «texto editado» viaja con el texto.
+    const { edited } = this.#state;
+    const originEdited = edited.has('origin');
+    const destinationEdited = edited.has('destination');
+    edited.clear();
+    if (destinationEdited) edited.add('origin');
+    if (originEdited) edited.add('destination');
 
     for (const role of ['origin', 'destination']) {
       const point = this.#state[role];

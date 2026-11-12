@@ -6,7 +6,7 @@
   <title>Carril Bici Albacete</title>
   <meta name="description" content="Calcula la ruta más corta entre dos direcciones de Albacete circulando solo por carril bici.">
   <meta name="theme-color" content="#12804a">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://tile.openstreetmap.org https://unpkg.com; connect-src 'self' https://overpass-api.de https://overpass.private.coffee https://overpass.kumi.systems https://nominatim.openstreetmap.org; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://tile.openstreetmap.org https://unpkg.com; connect-src 'self' https://overpass-api.de https://overpass.private.coffee https://overpass.kumi.systems https://nominatim.openstreetmap.org https://api.citybik.es; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -81,7 +81,7 @@
 
       <footer class="footer">
         <p id="network-stats" class="footer__stats"></p>
-        <button type="button" id="refresh-btn" class="btn btn--link">Actualizar datos</button>
+        <button type="button" id="refresh-btn" class="btn btn--link" title="La red se actualiza desde OpenStreetMap cada semana">Recargar datos</button>
       </footer>
     </aside>
 
@@ -91,6 +91,7 @@
         <span><i class="swatch swatch--network"></i>Red de carril bici</span>
         <span><i class="swatch swatch--route"></i>Tu ruta</span>
         <span><i class="swatch swatch--gap"></i>Hueco unido</span>
+        <span><i class="swatch swatch--station"></i>AlbaBici (bicis libres)</span>
       </div>
     </main>
   </div>
