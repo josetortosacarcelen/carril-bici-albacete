@@ -28,6 +28,13 @@ ${trkpts}
 `;
 }
 
+/** Nombre de archivo con la fecha y hora locales: ruta-carril-bici-20261112-2158.gpx */
+export function gpxFilename(date = new Date()) {
+  const two = (n) => String(n).padStart(2, '0');
+  const day = `${date.getFullYear()}${two(date.getMonth() + 1)}${two(date.getDate())}`;
+  return `ruta-carril-bici-${day}-${two(date.getHours())}${two(date.getMinutes())}.gpx`;
+}
+
 function withoutRepeats(points) {
   return points.filter((p, k) => k === 0 || p.lat !== points[k - 1].lat || p.lon !== points[k - 1].lon);
 }

@@ -4,6 +4,7 @@ import { App } from '../js/App.js';
 import { CyclewayGraphBuilder } from '../js/application/CyclewayGraphBuilder.js';
 import { BikeRouteService } from '../js/application/BikeRouteService.js';
 import { AStarPathFinder } from '../js/domain/AStarPathFinder.js';
+import { BikeShareService } from '../js/application/BikeShareService.js';
 
 // Un carril recto de ~860 m.
 const WAYS = [{
@@ -68,7 +69,7 @@ function setup({ repository, stationRepository = null, places = {}, builder = ne
   const app = new App({
     config: { city: 'Albacete', defaultGapToleranceM: 0, cyclingSpeedKmh: 15, bikeShare: { name: 'AlbaBici', refreshMs: 60000 } },
     repository: repository ?? { getNetwork: async () => ({ ways: WAYS, parkings: [] }), lastUpdated: () => null },
-    stationRepository,
+    bikeShare: stationRepository ? new BikeShareService({ repository: stationRepository, refreshMs: 60000 }) : null,
     graphBuilder: builder,
     routeService: new BikeRouteService({ pathFinder: new AStarPathFinder(), maxSnapDistanceM: 300 }),
     geocoder,

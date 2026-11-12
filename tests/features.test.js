@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { nearestStation } from '../js/application/nearestStation.js';
-import { toGpx } from '../js/application/gpx.js';
+import { toGpx, gpxFilename } from '../js/application/gpx.js';
+import { BikeShareService } from '../js/application/BikeShareService.js';
 import { CyclewayGraphBuilder, laneKind } from '../js/application/CyclewayGraphBuilder.js';
 import { LaneKind } from '../js/domain/edges.js';
 import { BikeRouteService } from '../js/application/BikeRouteService.js';
@@ -76,4 +77,23 @@ test('preferir carril separado evita el pintado si el rodeo es corto, y mide dis
   const safer = route(true);
   assert.equal(safer.paintedDistanceM, 0);
   assert.ok(safer.laneDistanceM > direct.laneDistanceM && safer.laneDistanceM < 900, `carril ${safer.laneDistanceM}`);
+});
+
+test('gpxFilename usa la fecha y hora locales', () => {
+  assert.equal(gpxFilename(new Date(2026, 10, 2, 9, 5)), 'ruta-carril-bici-20261102-0905.gpx');
+});
+
+test('BikeShareService conserva las últimas estaciones si el servicio falla', async () => {
+  let fail = false;
+  const stations = [station('a', -1.8601)];
+  const service = new BikeShareService({
+    repository: { getStations: async () => { if (fail) throw new Error('caído'); return stations; } },
+    refreshMs: 60000,
+  });
+  assert.equal(service.suggest({ lat: 39, lon: -1.86 }, { lat: 39, lon: -1.86 }), null, 'sin estaciones, sin propuesta');
+  assert.equal(await service.refresh(), true);
+  fail = true;
+  assert.equal(await service.refresh(), false);
+  assert.deepEqual(service.stations, stations);
+  assert.equal(service.suggest({ lat: 39, lon: -1.86 }, { lat: 39, lon: -1.86 }).pickup.station.id, 'a');
 });

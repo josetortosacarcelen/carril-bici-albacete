@@ -1,17 +1,15 @@
 import { RouteError, RouteErrorCode } from './application/BikeRouteService.js';
-import { nearestStation } from './application/nearestStation.js';
-import { toGpx } from './application/gpx.js';
+import { toGpx, gpxFilename } from './application/gpx.js';
 import { formatCoords } from './domain/geo.js';
 
 /**
- * Controlador: mantiene el estado (origen, destino, red, estaciones) y
- * coordina repositorios, servicio de rutas, mapa y panel. Recibe todo por inyección.
+ * Controlador: mantiene el estado (origen, destino, red) y coordina
+ * repositorio, servicios, mapa y panel. Recibe todo por inyección.
  */
 export class App {
   #deps;
   #state = {
     ways: [],
-    stations: [],
     origin: null,
     destination: null,
     pickTarget: 'origin',
@@ -22,10 +20,10 @@ export class App {
   };
 
   constructor({
-    repository, stationRepository = null, graphBuilder, routeService, geocoder, mapView, panel, config,
+    repository, bikeShare = null, graphBuilder, routeService, geocoder, mapView, panel, config,
     download = () => {},
   }) {
-    this.#deps = { repository, stationRepository, graphBuilder, routeService, geocoder, mapView, panel, config, download };
+    this.#deps = { repository, bikeShare, graphBuilder, routeService, geocoder, mapView, panel, config, download };
     this.#state.gapToleranceM = config.defaultGapToleranceM;
     this.#state.preferSegregated = config.preferSegregated ?? true;
   }
@@ -35,26 +33,13 @@ export class App {
     panel.setGapTolerance(this.#state.gapToleranceM);
     panel.setPickTarget(this.#state.pickTarget);
     this.#bindEvents();
-    this.#startStations();
+    this.#deps.bikeShare?.start((stations) => this.#onStations(stations));
     await this.#loadNetwork();
   }
 
-  /** Estaciones de bici pública: se cargan aparte y se refrescan solas. */
-  #startStations() {
-    const { stationRepository, config } = this.#deps;
-    if (!stationRepository) return;
-    this.#loadStations();
-    setInterval(() => this.#loadStations(), config.bikeShare.refreshMs);
-  }
-
-  async #loadStations() {
-    const { stationRepository, mapView, config } = this.#deps;
-    try {
-      this.#state.stations = await stationRepository.getStations();
-    } catch {
-      return; // Sin estaciones la app funciona igual; se reintenta en el siguiente refresco.
-    }
-    mapView.drawStations(this.#state.stations, (role, station) =>
+  #onStations(stations) {
+    const { mapView, config } = this.#deps;
+    mapView.drawStations(stations, (role, station) =>
       this.#setPoint(role, station, { label: `${config.bikeShare.name}: ${station.name}`, advance: true }));
     this.#showBikeShare();
   }
@@ -75,7 +60,7 @@ export class App {
       .on('downloadGpx', () => this.#downloadGpx())
       .on('refresh', () => {
         this.#loadNetwork({ forceRefresh: true });
-        if (this.#deps.stationRepository) this.#loadStations();
+        this.#deps.bikeShare?.refresh();
       })
       .on('submit', () => this.#submit());
   }
@@ -255,17 +240,10 @@ export class App {
     }
   }
 
-  /** Estación más cercana con bicis al origen y con anclajes libres al destino. */
   #showBikeShare() {
-    const { lastRoute, stations } = this.#state;
-    if (!lastRoute || stations.length === 0) {
-      this.#deps.panel.showBikeShare(null);
-      return;
-    }
-    this.#deps.panel.showBikeShare({
-      pickup: nearestStation(lastRoute.origin, stations, 'bikes'),
-      dropoff: nearestStation(lastRoute.destination, stations, 'slots'),
-    });
+    const { lastRoute } = this.#state;
+    const { bikeShare, panel } = this.#deps;
+    panel.showBikeShare(lastRoute && bikeShare ? bikeShare.suggest(lastRoute.origin, lastRoute.destination) : null);
   }
 
   #downloadGpx() {
@@ -274,9 +252,7 @@ export class App {
     if (!lastRoute) return;
     const name = `${panel.getInputValue('origin') || 'Origen'} → ${panel.getInputValue('destination') || 'Destino'}`;
     const now = new Date();
-    const two = (n) => String(n).padStart(2, '0');
-    const stamp = `${now.getFullYear()}${two(now.getMonth() + 1)}${two(now.getDate())}-${two(now.getHours())}${two(now.getMinutes())}`;
     const creator = `Carril Bici ${this.#deps.config.city}`;
-    download(`ruta-carril-bici-${stamp}.gpx`, toGpx({ ...lastRoute, name, creator, time: now }), 'application/gpx+xml');
+    download(gpxFilename(now), toGpx({ ...lastRoute, name, creator, time: now }), 'application/gpx+xml');
   }
 }

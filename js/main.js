@@ -4,6 +4,7 @@ import { App } from './App.js';
 import { AStarPathFinder } from './domain/AStarPathFinder.js';
 import { CyclewayGraphBuilder } from './application/CyclewayGraphBuilder.js';
 import { BikeRouteService } from './application/BikeRouteService.js';
+import { BikeShareService } from './application/BikeShareService.js';
 import { LocalStorageCache } from './infrastructure/LocalStorageCache.js';
 import { OverpassClient } from './infrastructure/OverpassClient.js';
 import { OverpassCyclewayRepository } from './infrastructure/OverpassCyclewayRepository.js';
@@ -32,7 +33,12 @@ const repository = new FallbackCyclewayRepository([
 const app = new App({
   config: CONFIG,
   repository,
-  stationRepository: CONFIG.bikeShare ? new CityBikesStationRepository({ url: CONFIG.bikeShare.url }) : null,
+  bikeShare: CONFIG.bikeShare
+    ? new BikeShareService({
+      repository: new CityBikesStationRepository({ url: CONFIG.bikeShare.url }),
+      refreshMs: CONFIG.bikeShare.refreshMs,
+    })
+    : null,
   graphBuilder: new CyclewayGraphBuilder(),
   routeService: new BikeRouteService({
     pathFinder: new AStarPathFinder(),
