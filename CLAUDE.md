@@ -19,9 +19,11 @@ No hay `npm install`: **cero dependencias**. Node ≥ 18 (fetch nativo). Leaflet
 
 Capas con dependencias solo hacia dentro: `ui → application → domain`; `infrastructure` implementa interfaces.
 
-- `domain/` — puro, testeable en Node: `Graph`, `AStarPathFinder`, `MinHeap`, `DisjointSet`, `SpatialIndex` (rejilla), `geo.haversine`.
-- `application/CyclewayGraphBuilder.js` — tramos OSM → grafo. `bikeDirection(tags)` decide sentido (1, -1, 0). `#bridgeGaps` une redes separadas (estilo Kruskal, **un solo puente por par de redes**).
-- `application/BikeRouteService.js` — engancha origen/destino al **nodo** más cercano (≤ `maxSnapDistanceM`) y lanza A*. Errores tipados: `RouteError` + `RouteErrorCode`.
+- `domain/` — puro, testeable en Node: `Graph`, `AStarPathFinder`, `MinHeap`, `DisjointSet`, `SpatialIndex` (nodos en rejilla), `SegmentIndex` (segmentos en rejilla + `projectOnSegment`), `distancesWithin` (Dijkstra acotado), `geo.haversine`.
+- `application/CyclewayGraphBuilder.js` — tramos OSM → `{ graph, segments: SegmentIndex, gaps, stats }`.
+  - `bikeDirection(tags)` → 1 / -1 / 0. Rotondas (`junction=roundabout|circular`) = sentido único; `oneway` acepta `yes|1|true`.
+  - `#bridgeGaps`: cada nodo se une al nodo más cercano de cada tramo vecino (≤ tolerancia) **solo si por carril hay que rodear > `DETOUR_FACTOR` (2) veces el salto**. Aristas de hueco dirigidas. Con datos reales: ~500 huecos a 20 m, ~3.000 a 100 m (por eso el mapa no los dibuja todos, solo los de la ruta).
+- `application/BikeRouteService.js` — engancha cada punto al **punto más cercano de hasta 8 tramos** (uno por `wayId`, ≤ `maxSnapDistanceM`) y lanza A* sobre `SnappedGraph` (vista del grafo con nodos temporales `start`/`goal`/`entryK`/`exitK`; **nunca muta la red compartida**). El acceso al carril pesa `accessWeight` (2) veces → prefiere más carril y menos ir fuera de él. Errores tipados: `RouteError` + `RouteErrorCode`. Aristas `EdgeKind`: `lane`, `gap`, `access`.
 - `infrastructure/` — repositorios de red con interfaz común `getWays({forceRefresh})` + `lastUpdated()`:
   `StaticFile…` (archivo del despliegue) → `Overpass…` (en vivo + `LocalStorageCache`), encadenados por `Fallback…`.
   `overpassQuery.js` es compartido por navegador y `scripts/fetch-network.js`: cambia la consulta en un solo sitio.
@@ -43,6 +45,7 @@ Archivo estático: `data/red-carril-bici.json` = `{ generatedAt, ways }` (ignora
 ## Trampas conocidas
 
 - **CSP en `<meta>` de `index.html`**: cualquier dominio externo nuevo (API, teselas, CDN) hay que añadirlo a `connect-src`/`img-src`/`script-src` o el navegador lo bloquea en silencio.
+- **Overpass desde Node necesita User-Agent propio**: overpass-api.de responde 406 al de por defecto (`node`). `OverpassClient` acepta `userAgent`; `fetch-network.js` envía `carril-bici-albacete/1.0`. Overpass a veces tarda > 3 min o da 429: lanzar la descarga en segundo plano.
 - **Nominatim**: máx. 1 petición/s, prohibido autocompletar → solo se busca al pulsar Enter/Buscar.
 - **Teselas OSM**: válidas solo para poco tráfico; si crece, cambiar `tiles` en `config.js` + CSP.
 - `scripts/build.js` copia una lista blanca (`PUBLIC`); un archivo público nuevo en la raíz hay que añadirlo ahí.
@@ -56,21 +59,23 @@ Archivo estático: `data/red-carril-bici.json` = `{ generatedAt, ways }` (ignora
 
 ## Problemas detectados pendientes (por prioridad)
 
-1. `#bridgeGaps`: un solo puente por par de redes y ninguno dentro de una misma red → rutas con rodeos; no es «la más corta» real.
-2. `#connectedComponents` ignora el sentido de las aristas → redes unidas solo en un sentido no reciben puente.
-3. `bikeDirection` no trata `junction=roundabout` como sentido único (tampoco `oneway=1/true`, `cycleway:*:oneway`).
-4. Enganche al nodo más cercano, no al punto más cercano del segmento; y sin probar alternativas si ese nodo no tiene salida.
-5. `App.#swap()` no intercambia `state.edited`. Reverse geocoding sin limitar a 1/s (clics/arrastres rápidos).
-6. «Actualizar datos» con archivo estático presente nunca consulta Overpass; el mensaje dice lo contrario.
-7. Google Fonts y Leaflet por CDN externos (RGPD / disponibilidad) → autoalojar.
-8. Tests ausentes: `DisjointSet`, `MinHeap`, `SpatialIndex`, `formatLabel`, `App`.
+1. `App.#swap()` no intercambia `state.edited`. Reverse geocoding sin limitar a 1/s (clics/arrastres rápidos).
+2. «Actualizar datos» con archivo estático presente nunca consulta Overpass; el mensaje dice lo contrario.
+3. Google Fonts y Leaflet por CDN externos (RGPD / disponibilidad) → autoalojar.
+4. Tests ausentes: `DisjointSet`, `MinHeap`, `SpatialIndex`, `SegmentIndex`, `formatLabel`, `App`.
+5. Ideas: peso por tipo de tramo (segregado vs pintado), exportar GPX, aparcabicis.
 
 Al arreglar uno, bórralo de aquí (y añade su test).
 
 ## Cómo trabajar aquí (eficiencia)
 
 - El proyecto es pequeño (~2.000 líneas): para preguntas generales lee directamente los archivos; no hacen falta subagentes.
-- Antes de dar por bueno un cambio: `npm test`. Cambios de UI: `npm start` y comprobar en el navegador.
+- Antes de dar por bueno un cambio: `npm test`.
+- **Cambios en el enrutado: medir con datos reales**, no solo con tests sintéticos. Con `data/red-carril-bici.json` descargado
+  (643 tramos en nov. 2026), comparar versión anterior (`git archive HEAD | tar -x -C <scratch>/old`) y nueva sobre ~150 pares
+  de puntos aleatorios con semilla fija: rutas encontradas, distancia, ms por ruta y por construcción. Referencia actual:
+  construir 20–110 ms, ~1 ms/ruta, 107/150 rutas con tolerancia 20 m.
+- Comprobar que un test nuevo falla con el código viejo (mismo truco de `git archive`) antes de darlo por válido. Cambios de UI: `npm start` y comprobar en el navegador.
 - Commits pequeños, mensaje en castellano. Nunca `push --force`; el remoto puede tener commits hechos desde la web.
 - Responder al usuario en castellano, directo y con prioridades claras.
 

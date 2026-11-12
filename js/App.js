@@ -67,7 +67,7 @@ export class App {
     const { graphBuilder, routeService, mapView, panel, repository } = this.#deps;
     const network = graphBuilder.build(this.#state.ways, { gapToleranceM: this.#state.gapToleranceM });
     routeService.setNetwork(network);
-    mapView.drawNetwork(this.#state.ways, network.gaps);
+    mapView.drawNetwork(this.#state.ways);
     panel.showNetworkStats(network.stats, repository.lastUpdated());
   }
 

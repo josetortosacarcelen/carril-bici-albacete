@@ -67,3 +67,58 @@ test('avisa si la dirección está lejos de cualquier carril', () => {
     (e) => e.code === RouteErrorCode.ORIGIN_FAR,
   );
 });
+
+test('las rotondas son de sentido único aunque no lleven oneway', () => {
+  assert.equal(bikeDirection({ highway: 'tertiary', junction: 'roundabout', cycleway: 'lane' }), 1);
+  assert.equal(bikeDirection({ junction: 'roundabout', 'oneway:bicycle': 'no' }), 0);
+  assert.equal(bikeDirection({ highway: 'cycleway', oneway: '1' }), 1);
+});
+
+test('une todos los cruces útiles entre dos redes, no solo el más corto', () => {
+  // Dos carriles paralelos a ~11 m, sin conexión. Cerca de cada extremo hay un cruce.
+  const parallel = [
+    way(40, [[1, 39.0, -1.86], [2, 39.0, -1.85]]),
+    way(41, [[3, 39.0001, -1.86], [4, 39.00012, -1.85]]),
+  ];
+  // Del extremo este de uno al extremo este del otro: saltar el hueco de ~13 m,
+  // no ir hasta el oeste por el cruce más corto (~11 m) y volver (~1,7 km).
+  const r = service(parallel, 20).route({ lat: 39.0, lon: -1.85 }, { lat: 39.00012, lon: -1.85 });
+  assert.ok(r.networkDistanceM < 20, `distancia ${r.networkDistanceM}`);
+});
+
+test('no inventa huecos donde el carril ya conecta sin rodeo', () => {
+  // Un tramo en L: las puntas están a ~14 m en línea recta y a ~20 m por el carril.
+  const corner = [way(50, [[1, 39.0, -1.86], [2, 39.0, -1.8599], [3, 39.0001, -1.8599]])];
+  assert.deepEqual(new CyclewayGraphBuilder().build(corner, { gapToleranceM: 20 }).gaps, []);
+});
+
+test('se engancha al punto más cercano del tramo, no solo a sus nodos', () => {
+  // Tramo de ~860 m con solo dos nodos; el origen está a ~110 m del centro del tramo.
+  const long = [way(60, [[1, 39.0, -1.86], [2, 39.0, -1.85]])];
+  const r = service(long).route({ lat: 39.001, lon: -1.855 }, { lat: 39.0, lon: -1.85 });
+  assert.ok(Math.abs(r.accessStartM - 111) < 5, `acceso ${r.accessStartM}`);
+  assert.ok(Math.abs(r.laneDistanceM - 432) < 10, `carril ${r.laneDistanceM}`);
+  assert.ok(Math.abs(r.entry.lon - -1.855) < 1e-6);
+});
+
+test('si el carril más cercano no lleva al destino, prueba otro', () => {
+  // A: sentido único hacia el este, aislado, a ~11 m del origen.
+  // B: doble sentido, a ~33 m del origen, y es donde está el destino.
+  const ways = [
+    way(70, [[1, 39.0, -1.86], [2, 39.0, -1.85]], { highway: 'cycleway', oneway: 'yes' }),
+    way(71, [[3, 39.0004, -1.86], [4, 39.0004, -1.85]]),
+  ];
+  const r = service(ways).route({ lat: 39.0001, lon: -1.851 }, { lat: 39.0004, lon: -1.8595 });
+  assert.ok(Math.abs(r.accessStartM - 33) < 3, `acceso ${r.accessStartM}`);
+});
+
+test('origen y destino en el mismo tramo, respetando el sentido', () => {
+  const oneway = [way(80, [[1, 39.0, -1.86], [2, 39.0, -1.85]], { highway: 'cycleway', oneway: 'yes' })];
+  const s = service(oneway);
+  const r = s.route({ lat: 39.0, lon: -1.858 }, { lat: 39.0, lon: -1.852 });
+  assert.ok(Math.abs(r.laneDistanceM - 519) < 10, `carril ${r.laneDistanceM}`);
+  assert.throws(
+    () => s.route({ lat: 39.0, lon: -1.852 }, { lat: 39.0, lon: -1.858 }),
+    (e) => e.code === RouteErrorCode.NO_PATH,
+  );
+});

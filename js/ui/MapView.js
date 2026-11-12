@@ -29,17 +29,16 @@ export class MapView {
     this.#map.on('click', (e) => handler({ lat: e.latlng.lat, lon: e.latlng.lng }));
   }
 
-  drawNetwork(ways, gaps) {
+  /** Solo los tramos: hay cientos de huecos posibles; se ven los que usa la ruta. */
+  drawNetwork(ways) {
     const layer = this.#networkLayer;
     layer.clearLayers();
     const laneStyle = { color: cssVar('--network'), weight: 3, opacity: 0.85, interactive: false };
-    const gapStyle = { color: cssVar('--gap'), weight: 2, dashArray: '4 5', interactive: false };
 
     for (const way of ways) {
       const coords = way.geometry.filter(Boolean).map(toLatLng);
       if (coords.length > 1) L.polyline(coords, laneStyle).addTo(layer);
     }
-    for (const [a, b] of gaps) L.polyline([toLatLng(a), toLatLng(b)], gapStyle).addTo(layer);
   }
 
   fitToWays(ways) {
