@@ -5,10 +5,12 @@
 name: Desplegar
 
 on:
-  push:
-    branches: [main]
-  schedule:
-    - cron: '17 4 * * 1'
+  # Desactivado temporalmente (cuenta de GitHub bloqueada por facturación):
+  # solo se ejecuta a mano. Para reactivarlo, descomenta push y schedule.
+  # push:
+  #   branches: [main]
+  # schedule:
+  #   - cron: '17 4 * * 1'
   workflow_dispatch:
 
 permissions:
