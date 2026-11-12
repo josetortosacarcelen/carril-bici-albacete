@@ -32,3 +32,21 @@ test('toWays descarta nodos y tramos sin geometría', () => {
   assert.deepEqual(ways.map((w) => w.id), [2]);
   assert.deepEqual(ways[0].tags, {});
 });
+
+test('toStations convierte las estaciones de CityBikes', async () => {
+  const { toStations } = await import('../js/infrastructure/CityBikesStationRepository.js');
+  const stations = toStations({ network: { stations: [
+    { id: 'a', name: '03 - C/ Baños', latitude: 38.99, longitude: -1.86, free_bikes: 2, empty_slots: 10,
+      extra: { ebikes: 1, online: true } },
+    { id: 'b', name: 'Sin datos', latitude: 38.98, longitude: -1.85, free_bikes: null, empty_slots: null,
+      extra: { online: false } },
+    { id: 'c', name: 'Sin posición', latitude: null, longitude: null },
+  ] } });
+  assert.deepEqual(stations.map((s) => s.id), ['a', 'b']);
+  assert.deepEqual(stations[0], {
+    id: 'a', name: '03 - C/ Baños', lat: 38.99, lon: -1.86, freeBikes: 2, ebikes: 1, emptySlots: 10, online: true,
+  });
+  assert.equal(stations[1].freeBikes, 0);
+  assert.equal(stations[1].online, false);
+  assert.deepEqual(toStations({}), []);
+});

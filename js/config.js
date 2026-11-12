@@ -20,12 +20,19 @@ export const CONFIG = Object.freeze({
 
   tiles: Object.freeze({
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · Estaciones: <a href="https://citybik.es">CityBikes</a>',
     maxZoom: 19,
   }),
 
   nominatimSearchUrl: 'https://nominatim.openstreetmap.org/search',
   nominatimReverseUrl: 'https://nominatim.openstreetmap.org/reverse',
+
+  // Bici pública con disponibilidad en tiempo real (null para no mostrarla).
+  bikeShare: Object.freeze({
+    name: 'AlbaBici',
+    url: 'https://api.citybik.es/v2/networks/albabici',
+    refreshMs: 2 * 60 * 1000,
+  }),
 
   cacheKey: 'carril-bici-albacete:red:v1',
   cacheTtlMs: 7 * 24 * 60 * 60 * 1000, // una semana

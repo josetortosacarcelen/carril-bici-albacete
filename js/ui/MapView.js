@@ -10,6 +10,9 @@ export class MapView {
   #map;
   #networkLayer;
   #routeLayer;
+  #stationLayer;
+  #stationMarkers = new Map();
+  #stations = new Map();
   #markers = {};
 
   constructor(elementId, { center, zoom, tiles }) {
@@ -23,6 +26,7 @@ export class MapView {
 
     this.#networkLayer = L.layerGroup().addTo(this.#map);
     this.#routeLayer = L.layerGroup().addTo(this.#map);
+    this.#stationLayer = L.layerGroup().addTo(this.#map);
   }
 
   onMapClick(handler) {
@@ -38,6 +42,38 @@ export class MapView {
     for (const way of ways) {
       const coords = way.geometry.filter(Boolean).map(toLatLng);
       if (coords.length > 1) L.polyline(coords, laneStyle).addTo(layer);
+    }
+  }
+
+  /**
+   * Estaciones de bici pública con sus bicis libres. Se actualizan en el
+   * sitio, sin cerrar la ventana de la estación que esté abierta.
+   * @param onPick (role, station) al pulsar «Salir de aquí» o «Llegar aquí».
+   */
+  drawStations(stations, onPick) {
+    const current = new Set();
+    for (const station of stations) {
+      current.add(station.id);
+      this.#stations.set(station.id, station);
+      const icon = stationIcon(station);
+      let marker = this.#stationMarkers.get(station.id);
+      if (marker) {
+        marker.setIcon(icon);
+        continue;
+      }
+      marker = L.marker(toLatLng(station), { icon, title: station.name, keyboard: true, zIndexOffset: -500 })
+        .addTo(this.#stationLayer);
+      marker.bindPopup(() => stationPopup(this.#stations.get(station.id), (role) => {
+        marker.closePopup();
+        onPick(role, this.#stations.get(station.id));
+      }));
+      this.#stationMarkers.set(station.id, marker);
+    }
+    for (const [id, marker] of this.#stationMarkers) {
+      if (current.has(id)) continue;
+      marker.remove();
+      this.#stationMarkers.delete(id);
+      this.#stations.delete(id);
     }
   }
 
@@ -101,4 +137,43 @@ export class MapView {
   clearRoute() {
     this.#routeLayer.clearLayers();
   }
+}
+
+function stationIcon(station) {
+  const badge = document.createElement('span');
+  const available = station.online && station.freeBikes > 0;
+  badge.className = available ? 'station' : 'station station--empty';
+  badge.textContent = station.online ? String(station.freeBikes) : '×';
+  return L.divIcon({ className: '', html: badge, iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -12] });
+}
+
+/** Contenido de la ventana de una estación (con textContent: datos externos). */
+function stationPopup(station, onPick) {
+  const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text) node.textContent = text;
+    return node;
+  };
+  const root = el('div', 'station-popup');
+  root.append(el('p', 'station-popup__name', station.name));
+
+  if (station.online) {
+    const bikes = station.freeBikes === 1 ? '1 bici libre' : `${station.freeBikes} bicis libres`;
+    const ebikes = station.ebikes > 0 ? ` (${station.ebikes} eléctrica${station.ebikes === 1 ? '' : 's'})` : '';
+    const slots = station.emptySlots === 1 ? '1 anclaje libre' : `${station.emptySlots} anclajes libres`;
+    root.append(el('p', 'station-popup__info', `${bikes}${ebikes} · ${slots}`));
+  } else {
+    root.append(el('p', 'station-popup__info', 'Fuera de servicio'));
+  }
+
+  const actions = el('div', 'station-popup__actions');
+  for (const [role, text] of [['origin', 'Salir de aquí'], ['destination', 'Llegar aquí']]) {
+    const button = el('button', 'btn btn--quiet', text);
+    button.type = 'button';
+    button.addEventListener('click', () => onPick(role));
+    actions.append(button);
+  }
+  root.append(actions);
+  return root;
 }

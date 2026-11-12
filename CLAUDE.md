@@ -2,6 +2,7 @@
 
 Web estática que calcula la ruta más corta entre dos puntos de Albacete **usando solo carril bici**.
 Datos de OpenStreetMap (Overpass), direcciones con Nominatim, mapa con Leaflet, ruta con A*.
+Estaciones de bici pública AlbaBici en tiempo real desde CityBikes.
 
 ## Comandos
 
@@ -26,9 +27,10 @@ Capas con dependencias solo hacia dentro: `ui → application → domain`; `infr
 - `application/BikeRouteService.js` — engancha cada punto al **punto más cercano de hasta 8 tramos** (uno por `wayId`, ≤ `maxSnapDistanceM`) y lanza A* sobre `SnappedGraph` (vista del grafo con nodos temporales `start`/`goal`/`entryK`/`exitK`; **nunca muta la red compartida**). El acceso al carril pesa `accessWeight` (2) veces → prefiere más carril y menos ir fuera de él. Errores tipados: `RouteError` + `RouteErrorCode`. Aristas `EdgeKind`: `lane`, `gap`, `access`.
 - `infrastructure/` — repositorios de red con interfaz común `getWays({forceRefresh})` + `lastUpdated()`:
   `StaticFile…` (archivo del despliegue) → `Overpass…` (en vivo + `LocalStorageCache`), encadenados por `Fallback…`.
+  `CityBikesStationRepository` (`getStations()`, AlbaBici en vivo, CORS abierto; `toStations` puro). `NominatimGeocoder` pasa todo por `RateLimiter` (1,1 s entre peticiones; `key` sustituye la petición en espera: `reverse(loc, { key: role })`).
   `overpassQuery.js` es compartido por navegador y `scripts/fetch-network.js`: cambia la consulta en un solo sitio.
-- `ui/MapView.js` — único archivo que conoce Leaflet (`L` global). `ui/RoutePanel.js` — DOM ↔ eventos (`on(event, fn)`).
-- `App.js` — estado (origen, destino, red, tolerancia) y coordinación. `main.js` — raíz de composición (DI). `config.js` — ciudad, bbox, URLs, parámetros.
+- `ui/MapView.js` — único archivo que conoce Leaflet (`L` global). `drawStations` actualiza marcadores en el sitio (no cierra la ventana abierta); ventanas construidas con DOM + `textContent`. `ui/RoutePanel.js` — DOM ↔ eventos (`on(event, fn)`).
+- `App.js` — estado (origen, destino, red, tolerancia) y coordinación. Estaciones: carga aparte, refresco cada `bikeShare.refreshMs`; si fallan, la app sigue igual. `main.js` — raíz de composición (DI). `config.js` — ciudad, bbox, URLs, parámetros.
 
 Formato de un tramo (`way`): `{ id, nodes: [osmNodeId…], tags: {…}, geometry: [{lat, lon}…] }` (paralelos `nodes`/`geometry`).
 Archivo estático: `data/red-carril-bici.json` = `{ generatedAt, ways }` (ignorado por git; lo genera el despliegue).
@@ -59,11 +61,11 @@ Archivo estático: `data/red-carril-bici.json` = `{ generatedAt, ways }` (ignora
 
 ## Problemas detectados pendientes (por prioridad)
 
-1. `App.#swap()` no intercambia `state.edited`. Reverse geocoding sin limitar a 1/s (clics/arrastres rápidos).
-2. «Actualizar datos» con archivo estático presente nunca consulta Overpass; el mensaje dice lo contrario.
-3. Google Fonts y Leaflet por CDN externos (RGPD / disponibilidad) → autoalojar.
-4. Tests ausentes: `DisjointSet`, `MinHeap`, `SpatialIndex`, `SegmentIndex`, `formatLabel`, `App`.
-5. Ideas: peso por tipo de tramo (segregado vs pintado), exportar GPX, aparcabicis.
+1. Google Fonts y Leaflet por CDN externos (RGPD / disponibilidad) → autoalojar.
+2. Tests ausentes: `App` (con dobles de panel/mapa/geocoder), `DisjointSet`, `MinHeap`, `SpatialIndex`, `SegmentIndex`, `formatLabel`.
+3. Accesibilidad: radio Origen/Destino sin flechas; sugerencias sin teclado ni `aria-expanded`.
+4. Caché de módulos JS tras desplegar (sin hash en nombres): un usuario puede ver una mezcla vieja/nueva unos minutos.
+5. Ideas: estación AlbaBici más cercana a origen/destino en el resultado, peso por tipo de tramo, exportar GPX, aparcabicis.
 
 Al arreglar uno, bórralo de aquí (y añade su test).
 
@@ -75,6 +77,10 @@ Al arreglar uno, bórralo de aquí (y añade su test).
   (643 tramos en nov. 2026), comparar versión anterior (`git archive HEAD | tar -x -C <scratch>/old`) y nueva sobre ~150 pares
   de puntos aleatorios con semilla fija: rutas encontradas, distancia, ms por ruta y por construcción. Referencia actual:
   construir 20–110 ms, ~1 ms/ruta, 107/150 rutas con tolerancia 20 m.
+- **Probar en Chrome**: el navegador cachea los módulos JS de `http.server` → recargar con `ctrl+shift+r`. Las capturas
+  están escaladas (1568 px de ancho frente a `innerWidth` real, p. ej. 1920): no calcular clics con `getBoundingClientRect`;
+  mejor pulsar desde `javascript_tool` (`el.click()` / `dispatchEvent`) y usar la captura solo para mirar.
+- Para parar el servidor local: `pkill -f "http.serve[r] 8000"` (el corchete evita que pkill se mate a sí mismo).
 - Comprobar que un test nuevo falla con el código viejo (mismo truco de `git archive`) antes de darlo por válido. Cambios de UI: `npm start` y comprobar en el navegador.
 - Commits pequeños, mensaje en castellano. Nunca `push --force`; el remoto puede tener commits hechos desde la web.
 - Responder al usuario en castellano, directo y con prioridades claras.

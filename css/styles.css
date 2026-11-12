@@ -14,6 +14,7 @@
   --destination: #12804a;
   --warn-bg: #fff4e5;
   --error-bg: #fde8e6;
+  --station: #b5307a;      /* bici pública: magenta, distinto de ruta, A/B y huecos */
 
   --font-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
   --font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -36,6 +37,7 @@
     --destination: #3ccf7f;
     --warn-bg: #3a2c16;
     --error-bg: #3d1f1c;
+    --station: #e06aa8;
     color-scheme: dark;
   }
 }
@@ -208,6 +210,7 @@ output { font-variant-numeric: tabular-nums; font-weight: 600; }
 .swatch--network { background: var(--network); }
 .swatch--route { background: var(--route); height: 6px; }
 .swatch--gap { background: repeating-linear-gradient(90deg, var(--gap) 0 5px, transparent 5px 9px); }
+.swatch--station { width: 12px; height: 12px; border-radius: 50%; background: var(--station); }
 .swatch--access { background: repeating-linear-gradient(90deg, var(--access) 0 2px, transparent 2px 6px); }
 
 /* Marcadores A / B */
@@ -243,3 +246,24 @@ output { font-variant-numeric: tabular-nums; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* Estaciones de bici pública */
+.station {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: var(--station);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
+  color: #fff;
+  font: 700 13px/1 var(--font-display);
+}
+.station--empty { background: var(--muted); }
+.station-popup { font: 400 14px/1.4 var(--font-body); min-width: 190px; }
+.station-popup p { margin: 0; }
+.station-popup__name { font-weight: 600; }
+.station-popup__info { margin-top: 2px !important; color: #5b6560; }
+.station-popup__actions { display: flex; gap: 6px; margin-top: 10px; }
+.station-popup__actions .btn { flex: 1; padding: 6px 8px; font-size: 13px; }

@@ -9,6 +9,7 @@ import { OverpassClient } from './infrastructure/OverpassClient.js';
 import { OverpassCyclewayRepository } from './infrastructure/OverpassCyclewayRepository.js';
 import { StaticFileCyclewayRepository } from './infrastructure/StaticFileCyclewayRepository.js';
 import { FallbackCyclewayRepository } from './infrastructure/FallbackCyclewayRepository.js';
+import { CityBikesStationRepository } from './infrastructure/CityBikesStationRepository.js';
 import { NominatimGeocoder } from './infrastructure/NominatimGeocoder.js';
 import { MapView } from './ui/MapView.js';
 import { RoutePanel } from './ui/RoutePanel.js';
@@ -27,6 +28,7 @@ const repository = new FallbackCyclewayRepository([
 const app = new App({
   config: CONFIG,
   repository,
+  stationRepository: CONFIG.bikeShare ? new CityBikesStationRepository({ url: CONFIG.bikeShare.url }) : null,
   graphBuilder: new CyclewayGraphBuilder(),
   routeService: new BikeRouteService({
     pathFinder: new AStarPathFinder(),

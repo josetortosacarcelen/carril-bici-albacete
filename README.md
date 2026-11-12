@@ -7,7 +7,9 @@ Calcula la ruta más corta entre dos direcciones de Albacete **yendo solo por ca
 1. Escribe una dirección y pulsa **Enter** (o **Buscar**), o pulsa directamente en el mapa.
    **A** es el origen y **B** el destino.
 2. La ruta aparece sola en cuanto hay dos puntos. Puedes arrastrar los marcadores.
-3. **Unir huecos**: en el mapa los carriles suelen cortarse en los cruces. Este control permite saltar cortes
+3. Las **estaciones de AlbaBici** salen en el mapa con las bicis libres en ese momento. Pulsa una y elige
+   **Salir de aquí** o **Llegar aquí** para usarla como origen o destino.
+4. **Unir huecos**: en el mapa los carriles suelen cortarse en los cruces. Este control permite saltar cortes
    de hasta X metros. Esos saltos se dibujan en naranja y se cuentan aparte. Con 0 m solo se usa carril.
 
 ¿Falta un carril o está mal? Corrígelo en [openstreetmap.org](https://www.openstreetmap.org): la app lo recoge en el siguiente despliegue.
@@ -44,6 +46,7 @@ Dirección de la web: <https://josetortosacarcelen.github.io/carril-bici-albacet
 |---|---|
 | Carriles bici | OpenStreetMap, descargados al publicar |
 | Direcciones | Nominatim (OpenStreetMap). Máximo una búsqueda por segundo |
+| Estaciones de AlbaBici | [CityBikes](https://citybik.es), en tiempo real |
 | Mapa de fondo | Teselas de OpenStreetMap. Valen para poco tráfico |
 
 Todo es gratuito y no necesita claves.
