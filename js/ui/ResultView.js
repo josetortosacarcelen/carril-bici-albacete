@@ -6,26 +6,36 @@ const plural = (n, one, many) => (n === 1 ? `1 ${one}` : `${n} ${many}`);
 export class ResultView {
   #el;
 
-  /** @param onDownloadGpx al pulsar «Descargar GPX» */
+  /**
+   * @param {HTMLElement} root
+   * @param {{ onDownloadGpx: () => void }} handlers onDownloadGpx: al pulsar «Descargar GPX»
+   */
   constructor(root, { onDownloadGpx }) {
-    const $ = (id) => root.querySelector(`#${id}`);
+    const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (root.querySelector(`#${id}`));
+    /** @type {(id: string) => [HTMLElement, HTMLElement]} */
+    const row = (id) => [$(`${id}-row`), $(id)];
     this.#el = {
       root,
       total: $('result-total'),
       time: $('result-time'),
       lane: $('result-lane'),
-      painted: [$('result-painted-row'), $('result-painted')],
-      shared: [$('result-shared-row'), $('result-shared')],
-      gap: [$('result-gap-row'), $('result-gap')],
+      painted: row('result-painted'),
+      shared: row('result-shared'),
+      gap: row('result-gap'),
       access: $('result-access'),
-      streets: [$('result-streets-row'), $('result-streets')],
-      bikeShare: [$('result-bikeshare-row'), $('result-bikeshare')],
+      streets: row('result-streets'),
+      bikeShare: row('result-bikeshare'),
     };
     $('gpx-btn').addEventListener('click', onDownloadGpx);
   }
 
+  /**
+   * @param {import('../domain/types.js').RouteResult} result
+   * @param {number} speedKmh
+   */
   show(result, speedKmh) {
     const el = this.#el;
+    /** @type {(pair: [HTMLElement, HTMLElement], text: string, visible: boolean) => void} */
     const row = ([container, value], text, visible) => {
       value.textContent = text;
       container.hidden = !visible;
@@ -41,7 +51,7 @@ export class ResultView {
     el.root.hidden = false;
   }
 
-  /** @param info { pickup, dropoff } (cada uno puede ser null), o null para ocultar la fila. */
+  /** @param {import('../domain/types.js').BikeShareSuggestion | null} info null para ocultar la fila */
   showBikeShare(info) {
     const [container, value] = this.#el.bikeShare;
     container.hidden = !info;

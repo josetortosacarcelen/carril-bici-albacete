@@ -12,7 +12,11 @@ export class PinLayer {
     this.#map = map;
   }
 
-  /** @param onMoved ({ lat, lon }) al soltar el marcador tras arrastrarlo */
+  /**
+   * @param {import('../../domain/types.js').Role} role
+   * @param {import('../../domain/types.js').LatLon} point
+   * @param {(point: import('../../domain/types.js').LatLon) => void} onMoved al soltar el marcador tras arrastrarlo
+   */
   set(role, point, onMoved) {
     const existing = this.#markers[role];
     if (existing) {

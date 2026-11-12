@@ -14,7 +14,9 @@ export class OverpassClient {
   constructor({ endpoints, timeoutMs = 45000, userAgent = null }) {
     this.#endpoints = endpoints;
     this.#timeoutMs = timeoutMs;
-    this.#headers = userAgent ? { 'User-Agent': userAgent } : {};
+    /** @type {Record<string, string>} */
+    const headers = userAgent ? { 'User-Agent': userAgent } : {};
+    this.#headers = headers;
   }
 
   async query(overpassQl) {
@@ -23,7 +25,7 @@ export class OverpassClient {
       try {
         return await this.#post(endpoint, overpassQl);
       } catch (error) {
-        failures.push(`${new URL(endpoint).host}: ${error.message}`);
+        failures.push(`${new URL(endpoint).host}: ${error instanceof Error ? error.message : error}`);
       }
     }
     throw new Error(`ningún servidor Overpass respondió (${failures.join('; ')})`);
@@ -42,7 +44,7 @@ export class OverpassClient {
       if (!response.ok) throw new Error(`código ${response.status}`);
       return await response.json();
     } catch (error) {
-      throw error.name === 'AbortError' ? new Error('tiempo de espera agotado') : error;
+      throw error instanceof Error && error.name === 'AbortError' ? new Error('tiempo de espera agotado') : error;
     } finally {
       clearTimeout(timer);
     }

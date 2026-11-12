@@ -22,6 +22,12 @@ export class RateLimiter {
     this.#intervalMs = intervalMs;
   }
 
+  /**
+   * @template T
+   * @param {() => T | Promise<T>} task
+   * @param {{ key?: string | null }} [options]
+   * @returns {Promise<T>}
+   */
   schedule(task, { key = null } = {}) {
     return new Promise((resolve, reject) => {
       if (key !== null) {

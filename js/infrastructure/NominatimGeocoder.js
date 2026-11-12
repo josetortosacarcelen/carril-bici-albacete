@@ -21,6 +21,10 @@ export class NominatimGeocoder {
     this.#bbox = bbox;
   }
 
+  /**
+   * @param {string} text
+   * @returns {Promise<import('../domain/types.js').Place[]>}
+   */
   async search(text) {
     const { west, north, east, south } = this.#bbox;
     const params = new URLSearchParams({
@@ -42,10 +46,12 @@ export class NominatimGeocoder {
   }
 
   /**
-   * @param key Peticiones con la misma clave se sustituyen mientras esperan turno
-   *   (rechazan con SupersededError): al arrastrar solo cuenta la última.
+   * @param {import('../domain/types.js').LatLon} point
+   * @param {{ key?: string }} [options] peticiones con la misma `key` se sustituyen mientras
+   *   esperan turno (rechazan con SupersededError): al arrastrar solo cuenta la última.
+   * @returns {Promise<string>}
    */
-  async reverse({ lat, lon }, { key = null } = {}) {
+  async reverse({ lat, lon }, { key } = {}) {
     const params = new URLSearchParams({
       lat: String(lat),
       lon: String(lon),
@@ -57,7 +63,8 @@ export class NominatimGeocoder {
     return formatLabel(await this.#get(`${this.#reverseUrl}?${params}`, key));
   }
 
-  #get(url, key = null) {
+  /** @param {string} url @param {string} [key] */
+  #get(url, key) {
     return this.#limiter.schedule(async () => {
       const response = await fetch(url, { headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error(`Nominatim respondió con el código ${response.status}`);

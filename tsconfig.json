@@ -1,0 +1,17 @@
+{
+  // Solo comprobación de tipos (npm run typecheck): no compila ni genera nada.
+  // El código sigue siendo JavaScript; los tipos van en JSDoc (ver js/domain/types.js).
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noImplicitAny": false,
+    "skipLibCheck": true
+  },
+  "include": ["js/**/*.js", "types/*.d.ts"]
+}

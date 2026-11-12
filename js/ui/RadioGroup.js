@@ -6,7 +6,10 @@
 export class RadioGroup {
   #buttons;
 
-  /** @param onChange (valor) al elegir con clic o con flechas */
+  /**
+   * @param {HTMLElement[]} buttons
+   * @param {(value: any) => void} onChange al elegir con clic o con flechas
+   */
   constructor(buttons, onChange) {
     this.#buttons = buttons;
     for (const button of buttons) {

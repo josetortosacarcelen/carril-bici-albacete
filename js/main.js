@@ -51,7 +51,7 @@ const app = new App({
     bbox: CONFIG.bbox,
   }),
   mapView: new MapView('map', { center: CONFIG.center, zoom: CONFIG.zoom, tiles: CONFIG.tiles }),
-  panel: new RoutePanel(document.querySelector('.panel'), { city: CONFIG.city }),
+  panel: new RoutePanel(/** @type {HTMLElement} */ (document.querySelector('.panel')), { city: CONFIG.city }),
   download,
 });
 

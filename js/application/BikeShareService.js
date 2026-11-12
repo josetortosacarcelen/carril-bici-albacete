@@ -8,15 +8,21 @@ import { nearestStation } from './nearestStation.js';
 export class BikeShareService {
   #repository;
   #refreshMs;
+  /** @type {import('../domain/types.js').Station[]} */
   #stations = [];
+  /** @type {((stations: import('../domain/types.js').Station[]) => void) | null} */
   #onChange = null;
 
+  /** @param {{ repository: { getStations: () => Promise<import('../domain/types.js').Station[]> }, refreshMs: number }} options */
   constructor({ repository, refreshMs }) {
     this.#repository = repository;
     this.#refreshMs = refreshMs;
   }
 
-  /** Carga ya y después cada refreshMs; avisa con onChange(stations) tras cada carga correcta. */
+  /**
+   * Carga ya y después cada refreshMs; avisa con onChange(stations) tras cada carga correcta.
+   * @param {(stations: import('../domain/types.js').Station[]) => void} onChange
+   */
   start(onChange) {
     this.#onChange = onChange;
     this.refresh();
@@ -38,7 +44,12 @@ export class BikeShareService {
     return this.#stations;
   }
 
-  /** Estación con bicis más cercana al origen y con anclajes libres más cercana al destino. */
+  /**
+   * Estación con bicis más cercana al origen y con anclajes libres más cercana al destino.
+   * @param {import('../domain/types.js').LatLon} origin
+   * @param {import('../domain/types.js').LatLon} destination
+   * @returns {import('../domain/types.js').BikeShareSuggestion | null}
+   */
   suggest(origin, destination) {
     if (this.#stations.length === 0) return null;
     return {

@@ -29,6 +29,7 @@ const MAX_CANDIDATES = 8;
  * El trayecto hasta el carril pesa accessWeight veces más que ir por él.
  */
 export class BikeRouteService {
+  /** @type {{ graph: import('../domain/Graph.js').Graph, segments: import('../domain/SegmentIndex.js').SegmentIndex } | null} */
   #network = null;
   #pathFinder;
   #maxSnapDistanceM;
@@ -40,25 +41,32 @@ export class BikeRouteService {
     this.#accessWeight = accessWeight;
   }
 
+  /** @param {{ graph: import('../domain/Graph.js').Graph, segments: import('../domain/SegmentIndex.js').SegmentIndex }} network */
   setNetwork(network) {
     this.#network = network;
   }
 
+  /**
+   * @param {import('../domain/types.js').LatLon} origin
+   * @param {import('../domain/types.js').LatLon} destination
+   * @returns {import('../domain/types.js').RouteResult}
+   */
   route(origin, destination) {
-    if (!this.#network) {
+    const network = this.#network;
+    if (!network) {
       throw new RouteError(RouteErrorCode.NO_NETWORK, 'La red de carriles bici aún se está cargando.');
     }
     const max = this.#maxSnapDistanceM;
-    const entries = this.#candidates(origin);
+    const entries = this.#candidates(network.segments, origin);
     if (entries.length === 0) {
       throw new RouteError(RouteErrorCode.ORIGIN_FAR, `El origen está a más de ${max} m de cualquier carril bici.`);
     }
-    const exits = this.#candidates(destination);
+    const exits = this.#candidates(network.segments, destination);
     if (exits.length === 0) {
       throw new RouteError(RouteErrorCode.DESTINATION_FAR, `El destino está a más de ${max} m de cualquier carril bici.`);
     }
 
-    const graph = this.#snap(origin, destination, entries, exits);
+    const graph = this.#snap(network.graph, origin, destination, entries, exits);
     const path = this.#pathFinder.find(graph, START, GOAL);
     if (!path) {
       throw new RouteError(
@@ -70,9 +78,9 @@ export class BikeRouteService {
   }
 
   /** El punto más cercano de cada tramo cercano, del más próximo al más lejano. */
-  #candidates(point) {
+  #candidates(segmentIndex, point) {
     const bestPerWay = new Map();
-    for (const candidate of this.#network.segments.within(point, this.#maxSnapDistanceM)) {
+    for (const candidate of segmentIndex.within(point, this.#maxSnapDistanceM)) {
       const best = bestPerWay.get(candidate.segment.wayId);
       if (!best || candidate.distance < best.distance) bestPerWay.set(candidate.segment.wayId, candidate);
     }
@@ -80,8 +88,7 @@ export class BikeRouteService {
   }
 
   /** Grafo de la red + nodos temporales para origen, destino y sus enganches. */
-  #snap(origin, destination, entries, exits) {
-    const base = this.#network.graph;
+  #snap(base, origin, destination, entries, exits) {
     const graph = new SnappedGraph(base);
     graph.addNode(START, origin);
     graph.addNode(GOAL, destination);
@@ -117,7 +124,9 @@ export class BikeRouteService {
   }
 
   #toResult(graph, { steps }) {
+    /** @type {import('../domain/types.js').RouteSegment[]} */
     const segments = [];
+    /** @type {string[]} */
     const streets = [];
     let laneDistanceM = 0;
     let gapDistanceM = 0;
@@ -139,7 +148,7 @@ export class BikeRouteService {
       if (edge.laneKind === LaneKind.SHARED) sharedDistanceM += edge.lengthM;
 
       const last = segments.at(-1);
-      if (last?.kind === edge.kind) last.points.push(graph.node(to));
+      if (last && last.kind === edge.kind) last.points.push(graph.node(to));
       else segments.push({ kind: edge.kind, points: [graph.node(from), graph.node(to)] });
 
       if (edge.name && streets.at(-1) !== edge.name) streets.push(edge.name);

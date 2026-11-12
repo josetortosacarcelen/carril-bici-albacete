@@ -16,9 +16,14 @@ export class RoutePanel {
   #pickTarget;
   #result;
 
-  /** @param city Para los mensajes («…dentro de Albacete»). */
+  /**
+   * @param {HTMLElement} root
+   * @param {{ city: string }} options city: para los mensajes («…dentro de Albacete»)
+   */
   constructor(root, { city }) {
-    const $ = (sel) => root.querySelector(sel);
+    const $ = (/** @type {string} */ sel) => /** @type {any} */ (root.querySelector(sel));
+    /** @type {(sel: string) => HTMLElement[]} */
+    const $$ = (sel) => [...root.querySelectorAll(sel)].map((e) => /** @type {HTMLElement} */ (e));
     this.#el = { status: $('#status'), stats: $('#network-stats'), gapInput: $('#gap-input'), gapOutput: $('#gap-output') };
 
     this.#addresses = Object.fromEntries(ROLES.map((role) => [role, new AddressCombobox(
@@ -29,7 +34,7 @@ export class RoutePanel {
         edited: () => this.#emit('inputEdited', role),
       },
     )]));
-    this.#pickTarget = new RadioGroup([...root.querySelectorAll('[data-value][role="radio"]')],
+    this.#pickTarget = new RadioGroup($$('[data-value][role="radio"]'),
       (role) => this.#emit('pickTargetChange', role));
     this.#result = new ResultView($('#result'), { onDownloadGpx: () => this.#emit('downloadGpx') });
 
@@ -37,8 +42,10 @@ export class RoutePanel {
       e.preventDefault();
       this.#emit('submit');
     });
-    root.querySelectorAll('[data-search]').forEach((btn) =>
-      btn.addEventListener('click', () => this.#emit('search', btn.dataset.search, this.#addresses[btn.dataset.search].value)));
+    for (const btn of $$('[data-search]')) {
+      const role = /** @type {'origin' | 'destination'} */ (btn.dataset.search);
+      btn.addEventListener('click', () => this.#emit('search', role, this.#addresses[role].value));
+    }
     this.#el.gapInput.addEventListener('input', () => { this.#el.gapOutput.value = this.#el.gapInput.value; });
     this.#el.gapInput.addEventListener('change', () => this.#emit('gapChange', Number(this.#el.gapInput.value)));
     for (const [id, event] of [['#swap-btn', 'swap'], ['#clear-btn', 'clear'], ['#refresh-btn', 'refresh']]) {

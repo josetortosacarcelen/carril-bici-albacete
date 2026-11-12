@@ -25,11 +25,11 @@ export class AStarPathFinder {
       const { value: current } = open.pop();
       if (closed.has(current)) continue;
       if (current === goalId) {
-        return { steps: this.#reconstruct(cameFrom, goalId), distance: cost.get(goalId) };
+        return { steps: this.#reconstruct(cameFrom, goalId), distance: cost.get(goalId) ?? Infinity };
       }
       closed.add(current);
 
-      const currentCost = cost.get(current);
+      const currentCost = cost.get(current) ?? Infinity;
       for (const edge of graph.neighbors(current)) {
         if (closed.has(edge.to)) continue;
         const tentative = currentCost + edge.weight;

@@ -4,6 +4,7 @@
  */
 export class StaticFileCyclewayRepository {
   #url;
+  /** @type {Date | null} */
   #generatedAt = null;
 
   constructor({ url }) {

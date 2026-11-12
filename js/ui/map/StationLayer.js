@@ -14,7 +14,10 @@ export class StationLayer {
     this.#layer = L.layerGroup().addTo(map);
   }
 
-  /** @param onPick (role, station) al pulsar «Salir de aquí» o «Llegar aquí». */
+  /**
+   * @param {import('../../domain/types.js').Station[]} stations
+   * @param {(role: import('../../domain/types.js').Role, station: import('../../domain/types.js').Station) => void} onPick al pulsar «Salir de aquí» o «Llegar aquí»
+   */
   draw(stations, onPick) {
     const current = new Set();
     for (const station of stations) {

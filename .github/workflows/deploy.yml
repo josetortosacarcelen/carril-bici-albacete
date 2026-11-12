@@ -32,6 +32,12 @@ jobs:
         with:
           node-version: 22
 
+      - name: Instalar herramientas de desarrollo (solo TypeScript)
+        run: npm ci
+
+      - name: Comprobar tipos
+        run: npm run typecheck
+
       - name: Tests
         run: npm test
 

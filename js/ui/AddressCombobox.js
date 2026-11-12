@@ -9,11 +9,13 @@ export class AddressCombobox {
   #list;
   #emptyText;
   #handlers;
+  /** @type {import('../domain/types.js').Place[]} */
   #places = [];
   #active = -1;
 
   /**
-   * @param handlers { search(texto), pick(lugar), edited() }
+   * @param {{ input: HTMLInputElement, list: HTMLElement, emptyText: string }} elements
+   * @param {{ search: (text: string) => void, pick: (place: import('../domain/types.js').Place) => void, edited: () => void }} handlers
    */
   constructor({ input, list, emptyText }, handlers) {
     this.#input = input;

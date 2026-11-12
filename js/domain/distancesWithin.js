@@ -3,8 +3,11 @@ import { MinHeap } from './MinHeap.js';
 /**
  * Dijkstra acotado: distancia por el grafo desde startId a cada nodo
  * alcanzable sin pasar de maxCost. Respeta el sentido de las aristas.
- * @param cost Coste de cada arista (por defecto, su peso).
- * @returns {Map<id, number>}
+ * @param {import('./Graph.js').Graph} graph
+ * @param {import('./types.js').NodeId} startId
+ * @param {number} maxCost
+ * @param {(edge: import('./types.js').Edge) => number} [cost] coste de cada arista (por defecto, su peso)
+ * @returns {Map<import('./types.js').NodeId, number>}
  */
 export function distancesWithin(graph, startId, maxCost, cost = (edge) => edge.weight) {
   const distance = new Map([[startId, 0]]);

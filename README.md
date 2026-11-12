@@ -19,11 +19,12 @@ Calcula la ruta más corta entre dos direcciones de Albacete **yendo solo por ca
 
 ## Probarla en tu ordenador
 
-Necesitas [Node.js](https://nodejs.org) 18 o superior y Python 3. No hay que instalar nada más.
+Necesitas [Node.js](https://nodejs.org) 18 o superior y Python 3.
 
 ```bash
-npm start      # abre http://localhost:8000
-npm test       # pasa los tests
+npm start        # abre http://localhost:8000
+npm ci           # solo la primera vez: instala TypeScript para las comprobaciones
+npm run check    # comprueba los tipos y pasa los tests
 ```
 
 No funciona abriendo `index.html` con doble clic: hay que servirla con `npm start`.

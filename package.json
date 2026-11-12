@@ -8,6 +8,11 @@
     "start": "python3 -m http.server 8000",
     "test": "node --test tests/*.test.js",
     "fetch-network": "node scripts/fetch-network.js",
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
   }
 }
